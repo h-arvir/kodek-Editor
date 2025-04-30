@@ -102,6 +102,11 @@ body {
   height: calc(100vh - 64px); /* Adjusted for new header height */
 }
 
+/* Adjust main content when in fullscreen mode */
+.main-content.fullscreen-content {
+  height: 100vh; /* Take up full viewport height */
+}
+
 .editor-container {
   display: flex;
   height: 100%;
@@ -135,6 +140,14 @@ body {
   right: 0;
   bottom: 0;
   z-index: 50;
+}
+
+/* Hide header when editor is in fullscreen mode */
+body.editor-fullscreen .header {
+  display: none !important;
+  z-index: -1; /* Ensure it's below other elements */
+  visibility: hidden; /* Additional hiding property */
+  opacity: 0; /* Make it transparent */
 }
 
 .panel-header {

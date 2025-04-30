@@ -216,16 +216,19 @@ function App() {
   return (
     <ThemeProvider>
       <div className="app-container">
-        <Header
-          language={language}
-          setLanguage={handleLocalLanguageChange} // Use the new handler
-          languageOptions={LANGUAGE_OPTIONS}
-          roomId={roomId}
-          username={selfInfo.username}
-          activeUsers={activeUsers}
-        />
+        {/* Only render header when not in fullscreen mode */}
+        {!isFullScreen && (
+          <Header
+            language={language}
+            setLanguage={handleLocalLanguageChange} // Use the new handler
+            languageOptions={LANGUAGE_OPTIONS}
+            roomId={roomId}
+            username={selfInfo.username}
+            activeUsers={activeUsers}
+          />
+        )}
 
-        <main className="main-content">
+        <main className={`main-content ${isFullScreen ? 'fullscreen-content' : ''}`}>
           <div className="editor-container">
             <RemoteCursors>
               <CodeEditor

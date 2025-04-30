@@ -16,6 +16,13 @@ export function useEditor({ initialCode }) {
   const [isOutputVisible, setIsOutputVisible] = useState(true);
   const monacoRef = useRef(null);
   const decorationsCollectionRef = useRef(null);
+  
+  // Clean up fullscreen mode when component unmounts
+  useEffect(() => {
+    return () => {
+      document.body.classList.remove('editor-fullscreen');
+    };
+  }, []);
 
   const {
     userCursors,
@@ -95,7 +102,18 @@ export function useEditor({ initialCode }) {
   /**
    * Toggle full screen mode
    */
-  const toggleFullScreen = () => setIsFullScreen((prev) => !prev);
+  const toggleFullScreen = () => {
+    setIsFullScreen((prev) => {
+      const newState = !prev;
+      // Add or remove a class on the body element for global styling
+      if (newState) {
+        document.body.classList.add('editor-fullscreen');
+      } else {
+        document.body.classList.remove('editor-fullscreen');
+      }
+      return newState;
+    });
+  };
 
   /**
    * Toggle output panel visibility

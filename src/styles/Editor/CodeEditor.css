@@ -35,6 +35,13 @@
   bottom: 0;
   z-index: 50;
   border-radius: 0;
+  height: 100vh !important; /* Ensure it takes full viewport height */
+}
+
+/* Hide dock container when in fullscreen mode */
+.panel.fullscreen .dock-container,
+body.editor-fullscreen .dock-container {
+  display: none !important;
 }
 
 .panel-header {
@@ -48,6 +55,7 @@
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: 0.5px;
+  z-index: 100; /* Ensure it's above other elements */
 }
 
 .editor-wrapper {
@@ -55,6 +63,11 @@
   height: 100%;
   overflow: hidden;
   background-color: var(--bg-darker);
+}
+
+/* Make editor take full width when in fullscreen mode */
+.panel.fullscreen .editor-wrapper {
+  width: 100%;
 }
 
 /* Add subtle glow to the editor */

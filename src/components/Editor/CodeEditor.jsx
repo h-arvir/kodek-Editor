@@ -82,7 +82,8 @@ export const CodeEditor = memo(
     return (
       <div className={`panel ${isFullScreen ? 'fullscreen' : ''}`}>
         <div className="panel-header">
-          <span>Kodek Editor</span>
+          {!isFullScreen && <span>Kodek Editor</span>}
+          {isFullScreen && <span>Fullscreen Mode</span>}
           <button
             className="button-secondary"
             onClick={toggleFullScreen}
