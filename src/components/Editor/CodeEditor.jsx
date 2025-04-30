@@ -7,13 +7,16 @@ import { memo, useState } from 'react';
 import {
   VscAccount,
   VscArchive,
+  VscColorMode,
   VscHome,
   VscSettingsGear,
 } from 'react-icons/vsc';
+import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 
 import Dock from '../../../reactbits/dock';
 import { ChatDock } from '../Chat/ChatDock';
 import { useCollaboration } from '../../context/collabration';
+import { useTheme } from '../../context/theme';
 
 export const CodeEditor = memo(
   ({
@@ -30,10 +33,11 @@ export const CodeEditor = memo(
   }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const { unreadCount } = useCollaboration();
+    const { theme, toggleTheme, isDark } = useTheme();
     
     // Handle the toggle output with additional debugging
     const handleToggleOutput = () => {
-      console.log('Archive button clicked!');
+      console.log('toggle button clicked!');
       if (typeof toggleOutput === 'function') {
         toggleOutput();
       } else {
@@ -43,7 +47,7 @@ export const CodeEditor = memo(
     
     // Handle the profile button click to toggle chat
     const handleProfileClick = () => {
-      console.log('Profile button clicked!');
+      console.log('chat button clicked!');
       setIsChatOpen(!isChatOpen);
     };
 
@@ -71,9 +75,9 @@ export const CodeEditor = memo(
         onClick: handleProfileClick,
       },
       {
-        icon: <VscSettingsGear size={18} />,
-        label: 'Settings',
-        onClick: () => alert('Settings!'),
+        icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
+        label: isDark ? 'Light Mode' : 'Dark Mode',
+        onClick: toggleTheme,
       },
     ];
 
@@ -179,7 +183,7 @@ export const CodeEditor = memo(
               language={language}
               value={code}
               onChange={handleCodeChange}
-              theme="vs-dark"
+              theme={isDark ? "vs-dark" : "light"}
               onMount={handleEditorDidMount}
               options={{
                 fontSize: 14,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import './styles/common/variables.css';
 import './styles/common/buttons.css';
+import './styles/common/themes.css';
 import './styles/App.css';
 
 import { RemoteCursors, useMouseProps } from '@/components/ui/remote-cursors';
@@ -11,6 +12,7 @@ import { CodeEditor } from './components/Editor/CodeEditor';
 import { OutputPanel } from './components/Editor/OutputPanel';
 import { Header } from './components/Layout/Header';
 import { useCollaboration } from './context/collabration';
+import { ThemeProvider } from './context/theme';
 import { useCodeExecution } from './hooks/useCodeExecution';
 import { useEditor } from './hooks/useEditor';
 import { LANGUAGE_OPTIONS } from './utils/constants';
@@ -195,55 +197,59 @@ function App() {
   // Render join room form if not connected
   if (!joinedRoom || !selfInfo) {
     return (
-      <JoinRoom
-        username={username}
-        setUsername={setUsername}
-        roomId={roomId}
-        setRoomId={setRoomId}
-        joinRoom={joinRoom}
-        connectionError={connectionError}
-        usernameError={usernameError}
-        isConnected={isConnected}
-      />
+      <ThemeProvider>
+        <JoinRoom
+          username={username}
+          setUsername={setUsername}
+          roomId={roomId}
+          setRoomId={setRoomId}
+          joinRoom={joinRoom}
+          connectionError={connectionError}
+          usernameError={usernameError}
+          isConnected={isConnected}
+        />
+      </ThemeProvider>
     );
   }
 
   // Render main editor view
   return (
-    <div className="app-container">
-      <Header
-        language={language}
-        setLanguage={handleLocalLanguageChange} // Use the new handler
-        languageOptions={LANGUAGE_OPTIONS}
-        roomId={roomId}
-        username={selfInfo.username}
-        activeUsers={activeUsers}
-      />
+    <ThemeProvider>
+      <div className="app-container">
+        <Header
+          language={language}
+          setLanguage={handleLocalLanguageChange} // Use the new handler
+          languageOptions={LANGUAGE_OPTIONS}
+          roomId={roomId}
+          username={selfInfo.username}
+          activeUsers={activeUsers}
+        />
 
-      <main className="main-content">
-        <div className="editor-container">
-          <RemoteCursors>
-            <CodeEditor
-              language={language}
-              code={code}
-              handleEditorDidMount={handleEditorDidMount}
-              isFullScreen={isFullScreen}
-              toggleFullScreen={toggleFullScreen}
-              toggleOutput={toggleOutput}
-              runCode={executeCode}
-              isLoading={isLoading}
-              {...mouseMoveProps}
-            />
-            <OutputPanel
-              isFullScreen={isFullScreen}
-              isOutputVisible={isOutputVisible}
-              output={output}
-              clearOutput={clearOutput}
-            />
-          </RemoteCursors>
-        </div>
-      </main>
-    </div>
+        <main className="main-content">
+          <div className="editor-container">
+            <RemoteCursors>
+              <CodeEditor
+                language={language}
+                code={code}
+                handleEditorDidMount={handleEditorDidMount}
+                isFullScreen={isFullScreen}
+                toggleFullScreen={toggleFullScreen}
+                toggleOutput={toggleOutput}
+                runCode={executeCode}
+                isLoading={isLoading}
+                {...mouseMoveProps}
+              />
+              <OutputPanel
+                isFullScreen={isFullScreen}
+                isOutputVisible={isOutputVisible}
+                output={output}
+                clearOutput={clearOutput}
+              />
+            </RemoteCursors>
+          </div>
+        </main>
+      </div>
+    </ThemeProvider>
   );
 }
 

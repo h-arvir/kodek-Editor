@@ -15,9 +15,10 @@ import {
   useMotionValue,
   useSpring,
   useTransform,
-} from 'motion/react';
+} from 'framer-motion';
 
 import '../src/styles/Editor/dock.css';
+import ZenMode from './ZenMode';
 
 function DockItem({
   children,
@@ -125,6 +126,7 @@ export default function Dock({
 }) {
   const mouseX = useMotionValue(Infinity);
   const isHovered = useMotionValue(0);
+  const [zenModeActive, setZenModeActive] = useState(false);
 
   const maxHeight = useMemo(
     () => Math.max(dockHeight, magnification + magnification / 2 + 4),
@@ -133,41 +135,76 @@ export default function Dock({
   const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight]);
   const height = useSpring(heightRow, spring);
 
+  // Toggle Zen Mode
+  const toggleZenMode = () => {
+    console.log('Toggling Zen Mode, current state:', !zenModeActive);
+    setZenModeActive(!zenModeActive);
+  };
+
+  // Add a Zen Mode item if not already in the items array
+  const dockItems = useMemo(() => {
+    // Check if a Zen Mode item already exists in the items array
+    const zenModeExists = items.some(item => 
+      item.label && item.label.toLowerCase().includes('zen')
+    );
+
+    if (!zenModeExists) {
+      // Create a new array with the zen mode item added
+      return [
+        ...items,
+        {
+          icon: '🧘',
+          label: 'Zen Mode',
+          onClick: toggleZenMode,
+          className: 'zen-mode-item',
+        },
+      ];
+    }
+    
+    return items;
+  }, [items]);
+
   return (
-    <motion.div
-      style={{ height, scrollbarWidth: 'none' }}
-      className="dock-outer"
-    >
+    <>
       <motion.div
-        onMouseMove={({ pageX }) => {
-          isHovered.set(1);
-          mouseX.set(pageX);
-        }}
-        onMouseLeave={() => {
-          isHovered.set(0);
-          mouseX.set(Infinity);
-        }}
-        className={`dock-panel ${className}`}
-        // style={{ height: panelHeight }}
-        role="toolbar"
-        aria-label="Application dock"
+        style={{ height, scrollbarWidth: 'none' }}
+        className="dock-outer"
       >
-        {items.map((item, index) => (
-          <DockItem
-            key={index}
-            onClick={item.onClick}
-            className={item.className}
-            mouseX={mouseX}
-            spring={spring}
-            distance={distance}
-            magnification={magnification}
-            baseItemSize={baseItemSize}
-          >
-            <DockIcon>{item.icon}</DockIcon>
-            <DockLabel>{item.label}</DockLabel>
-          </DockItem>
-        ))}
+        <motion.div
+          onMouseMove={({ pageX }) => {
+            isHovered.set(1);
+            mouseX.set(pageX);
+          }}
+          onMouseLeave={() => {
+            isHovered.set(0);
+            mouseX.set(Infinity);
+          }}
+          className={`dock-panel ${className}`}
+          role="toolbar"
+          aria-label="Application dock"
+        >
+          {dockItems.map((item, index) => (
+            <DockItem
+              key={index}
+              onClick={item.onClick}
+              className={item.className}
+              mouseX={mouseX}
+              spring={spring}
+              distance={distance}
+              magnification={magnification}
+              baseItemSize={baseItemSize}
+            >
+              <DockIcon>{item.icon}</DockIcon>
+              <DockLabel>{item.label}</DockLabel>
+            </DockItem>
+          ))}
+        </motion.div>
       </motion.div>
-    </motion.div>
+      
+      <ZenMode 
+        isActive={zenModeActive} 
+        onClose={() => setZenModeActive(false)} 
+      />
+    </>
   );
 }
