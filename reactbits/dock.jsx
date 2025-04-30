@@ -153,7 +153,7 @@ export default function Dock({
       return [
         ...items,
         {
-          icon: '🧘',
+          icon: '🌧️',
           label: 'Zen Mode',
           onClick: toggleZenMode,
           className: 'zen-mode-item',

@@ -1,4 +1,4 @@
-.editor-container {
+  .editor-container {
   display: flex;
   height: 100%;
   width: 100%;
@@ -39,11 +39,7 @@
 
 .panel-header {
   padding: 0.75rem 1rem;
-  background: linear-gradient(
-    to right,
-    var(--panel-header),
-    rgba(15, 15, 15, 0.9)
-  );
+  background: var(--panel-header); /* Removed linear-gradient */
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;

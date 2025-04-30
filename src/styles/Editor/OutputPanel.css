@@ -28,22 +28,22 @@
 
 .terminal::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
-  box-shadow: 0 0 8px var(--primary-glow);
+  /* box-shadow: 0 0 8px var(--primary-glow); Removed shadow */
 }
 
 .output-success {
   color: #10b981;
-  text-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+  /* text-shadow: 0 0 5px rgba(16, 185, 129, 0.3); Removed shadow */
 }
 
 .output-error {
   color: #ef4444;
-  text-shadow: 0 0 5px rgba(239, 68, 68, 0.3);
+  /* text-shadow: 0 0 5px rgba(239, 68, 68, 0.3); Removed shadow */
 }
 
 .output-info {
   color: var(--primary-light);
-  text-shadow: 0 0 5px var(--primary-glow);
+  /* text-shadow: 0 0 5px var(--primary-glow); Removed shadow */
 }
 
 .output-time {

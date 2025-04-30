@@ -123,7 +123,7 @@ export function ChatDock({ isOpen, setIsOpen }) {
               className="chat-send-btn"
               disabled={!message.trim() || message.length > MESSAGE_MAX_LENGTH}
             >
-              <FiSend />
+              <FiSend />🚀
             </button>
           </form>
           

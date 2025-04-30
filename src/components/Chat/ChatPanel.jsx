@@ -105,7 +105,7 @@ export function ChatPanel() {
                         className="message-username" 
                         style={{ color: msg.color }}
                       >
-                        {msg.userId === selfInfo?.id ? 'You' : msg.username}
+                        {msg.userId === selfInfo?.id ? 'You ' : msg.username}
                       </span>
                       <span className="message-time">{formatTime(msg.timestamp)}</span>
                     </div>

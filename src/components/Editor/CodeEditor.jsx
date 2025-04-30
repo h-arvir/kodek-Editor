@@ -5,12 +5,10 @@ import '../../styles/Editor/CodeEditor.css';
 import { memo, useState } from 'react';
 
 import {
-  VscAccount,
-  VscArchive,
-  VscColorMode,
-  VscHome,
-  VscSettingsGear,
-} from 'react-icons/vsc';
+  VscTerminalPowershell,
+  VscFeedback,
+  VscComment,
+  } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 
 import Dock from '../../../reactbits/dock';
@@ -52,20 +50,20 @@ export const CodeEditor = memo(
     };
 
     const items = [
+      // {
+      //   icon: <VscHome size={18} />,
+      //   label: 'Home',
+      //   onClick: () => alert('Home!'),
+      // },
       {
-        icon: <VscHome size={18} />,
-        label: 'Home',
-        onClick: () => alert('Home!'),
-      },
-      {
-        icon: <VscArchive size={18} />,
+        icon: <VscTerminalPowershell size={18} />,
         label: 'Toggle Output',
         onClick: handleToggleOutput,
       },
       {
         icon: (
           <div style={{ position: 'relative' }}>
-            <VscAccount size={18} />
+            <VscFeedback size={18} />
             {unreadCount > 0 && (
               <span className="profile-button-badge">{unreadCount}</span>
             )}
@@ -171,7 +169,7 @@ export const CodeEditor = memo(
             <Dock
               items={items}
               panelHeight={68}
-              baseItemSize={50}
+              baseItemSize={60}
               magnification={70}
             />
             <ChatDock isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
