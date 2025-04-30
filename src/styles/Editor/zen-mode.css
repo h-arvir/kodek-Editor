@@ -74,7 +74,15 @@
   cursor: pointer;
 }
 
-.exit-button {
+.zen-mode-controls {
+  display: flex;
+  justify-content: center; /* Center buttons horizontally */
+  gap: 0.75rem; /* Space between buttons */
+  margin-top: 1.5rem; /* Space above the buttons */
+}
+
+.exit-button,
+.minimize-button {
   padding: 0.5rem 1rem;
   background-color: rgba(255, 255, 255, 0.2);
   border: none;
@@ -90,6 +98,13 @@
 
 .exit-button:active {
   transform: scale(0.98);
+}
+
+.minimize-button {
+  /* Specific styles for minimize if needed, otherwise inherits from .exit-button */
+  padding: 0.5rem 0.8rem; /* Slightly less padding for icon-like button */
+  font-size: 1.1rem; /* Make icon slightly larger */
+  line-height: 1; /* Adjust line height for icon */
 }
 
 /* Track Selection Styles */
@@ -160,4 +175,22 @@
   border-top: 1px dashed rgba(255, 255, 150, 0.3);
   padding-top: 0.5rem;
   margin-top: 0.5rem;
-} 
+}
+
+.error-message .retry-button {
+  margin-top: 1rem;
+  padding: 0.4rem 0.8rem;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.4rem;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.85rem;
+}
+
+.error-message .retry-button:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Removed styles for .minimized and .restore-button as they are no longer used */

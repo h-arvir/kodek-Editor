@@ -15,159 +15,212 @@ const AUDIO_TRACKS = [
   // Ready for more tracks in the future
 ];
 
-export default function ZenMode({ isActive, onClose }) {
+export default function ZenMode({ isActive }) { // Removed onClose prop
   const audioRef = useRef(null);
-  const [volume, setVolume] = useState(50);
-  const [currentTrackId, setCurrentTrackId] = useState(AUDIO_TRACKS[0].id);
+  const [volume, setVolume] = useState(50); // Keep volume control logic if needed externally later, or remove if truly headless
+  const [currentTrackId, setCurrentTrackId] = useState(AUDIO_TRACKS[0].id); // Keep track selection logic if needed externally later
   const [audioLoaded, setAudioLoaded] = useState(false);
-  const [audioError, setAudioError] = useState(false);
-  
+  const [audioError, setAudioError] = useState(null); // Store error details
+  const [isPlaying, setIsPlaying] = useState(false); // Track playback state
+  // Removed isMinimized state
+
+  // NOTE: minimizeTriggeredRef is removed as it's no longer the correct approach
+
   const currentTrack = AUDIO_TRACKS.find(track => track.id === currentTrackId) || AUDIO_TRACKS[0];
-  
+
+  // --- Consolidated Audio Logic ---
   useEffect(() => {
-    if (isActive && audioRef.current && !audioError) {
-      try {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.error('Error playing audio:', error);
-            setAudioError(true);
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    console.log('[ZenMode] Effect triggered:', { isActive, currentTrackId, audioError: !!audioError });
+
+    const attemptPlay = () => {
+      console.log('[ZenMode] Attempting play...');
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('[ZenMode] Playback started successfully.');
+            setIsPlaying(true);
+            setAudioError(null); // Clear previous errors on successful play
+          })
+          .catch(error => {
+            console.error('[ZenMode] Error during play attempt:', error);
+            // Don't set audioError here if it's just an interruption
+            if (error.name !== 'AbortError') {
+                 setAudioError({ message: 'Playback failed.', details: error });
+            }
+            setIsPlaying(false);
           });
-        }
-      } catch (error) {
-        console.error('Error playing audio:', error);
-        setAudioError(true);
-      }
-    } else if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
+      } else {
+         // Fallback for browsers not returning a promise (older?)
+         setIsPlaying(true);
+         setAudioError(null);
       }
     };
-  }, [isActive, audioError]);
-  
+
+    if (isActive && !audioError) {
+      // If track changed or audio wasn't playing, load and play
+      if (audio.currentSrc !== audio.src || !isPlaying) {
+         console.log('[ZenMode] Loading new track or resuming...');
+         audio.load(); // Important when changing src or after error
+         // Play is often best initiated after 'canplaythrough' or 'loadeddata',
+         // but browsers might block autoplay, so we try directly.
+         // The 'onLoadedData' handler will also try to play if needed.
+         attemptPlay();
+      } else if (!isPlaying) {
+          // If same track but paused, just play
+          attemptPlay();
+      }
+    } else {
+      console.log('[ZenMode] Pausing audio.');
+      audio.pause();
+      setIsPlaying(false);
+    }
+
+    // Cleanup function
+    // Cleanup function: Pause audio only when the component becomes inactive (isActive goes false)
+    return () => {
+      if (audio) {
+        console.log('[ZenMode] Cleanup: Pausing audio as component becomes inactive.');
+        audio.pause();
+        setIsPlaying(false);
+      }
+    };
+  // Rerun audio logic when active state, track, or error status changes
+  // isMinimized does NOT affect audio playback directly
+  }, [isActive, currentTrackId, audioError]);
+
+  // --- Volume Control ---
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume / 100;
+      console.log('[ZenMode] Volume set to:', volume);
     }
   }, [volume]);
-  
-  // Handle track change
-  useEffect(() => {
-    if (audioRef.current && !audioError) {
-      audioRef.current.pause();
-      audioRef.current.load();
-      if (isActive) {
-        try {
-          const playPromise = audioRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.error('Error playing audio after track change:', error);
-              setAudioError(true);
-            });
-          }
-        } catch (error) {
-          console.error('Error playing audio after track change:', error);
-          setAudioError(true);
-        }
-      }
-    }
-  }, [currentTrackId, isActive, audioError]);
-  
+
+  // --- Event Handlers ---
   const handleAudioLoaded = () => {
-    console.log('Audio loaded successfully:', currentTrack.path);
+    console.log('[ZenMode] Event: onLoadedData - Audio data loaded for:', currentTrack.path);
     setAudioLoaded(true);
-    setAudioError(false);
+    setAudioError(null); // Clear error on successful load
+    // If component is active, try playing now that data is loaded
+    if (isActive && audioRef.current && !isPlaying) {
+        console.log('[ZenMode] Event: onLoadedData - Attempting play post-load...');
+        const playPromise = audioRef.current.play();
+         if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                 console.error('[ZenMode] Error during play attempt post-load:', error);
+                 if (error.name !== 'AbortError') {
+                    setAudioError({ message: 'Playback failed post-load.', details: error });
+                 }
+                 setIsPlaying(false);
+            });
+         }
+    }
   };
-  
+
   const handleAudioError = (event) => {
-    console.error('Audio failed to load:', {
+    const error = event.target.error;
+    const errorCode = error ? error.code : 'N/A';
+    const errorMessage = error ? error.message : 'Unknown error';
+    // Map common error codes to user-friendly messages
+    let detailedMessage = `Audio failed to load (Code: ${errorCode}).`;
+    switch (errorCode) {
+        case MediaError.MEDIA_ERR_ABORTED:
+            detailedMessage += ' The fetching process was aborted by the user.';
+            break;
+        case MediaError.MEDIA_ERR_NETWORK:
+            detailedMessage += ' A network error caused the audio download to fail.';
+            break;
+        case MediaError.MEDIA_ERR_DECODE:
+            detailedMessage += ' The audio playback was aborted due to a corruption problem or because the audio used features your browser did not support.';
+            break;
+        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            detailedMessage += ' The audio could not be loaded, either because the server or network failed or because the format is not supported.';
+            break;
+        default:
+            detailedMessage += ` An unknown error occurred: ${errorMessage}`;
+    }
+
+    console.error('[ZenMode] Event: onError - Audio Error:', {
       path: currentTrack.path,
-      error: event.target.error,
+      errorCode: errorCode,
+      errorMessage: errorMessage,
       networkState: event.target.networkState,
-      readyState: event.target.readyState
+      readyState: event.target.readyState,
+      fullErrorObject: error // Log the full error object for deep dive
     });
-    setAudioError(true);
+
+    setAudioError({ message: detailedMessage, details: error });
+    setAudioLoaded(false);
+    setIsPlaying(false);
   };
-  
-  if (!isActive) return null;
-  
+
+   const handleCanPlay = () => {
+     console.log('[ZenMode] Event: onCanPlay - Browser estimates it can play:', currentTrack.path);
+     // You could potentially trigger play here too, but handleLoadedData is often sufficient
+   };
+
+   const handleWaiting = () => {
+     console.log('[ZenMode] Event: onWaiting - Playback stopped due to temporary lack of data (buffering).');
+   };
+
+   const handlePlaying = () => {
+     console.log('[ZenMode] Event: onPlaying - Playback has started or resumed.');
+     setIsPlaying(true); // Ensure state is correct
+   };
+
+   const handlePause = () => {
+     console.log('[ZenMode] Event: onPause - Playback has been paused.');
+     setIsPlaying(false); // Ensure state is correct
+   };
+
+   // --- Button Handlers Removed ---
+   // handleMinimizeClick, handleRestoreClick, handleExitClick are removed as there is no UI.
+
+  // Render null if the component is not active
+  if (!isActive) {
+      console.log('[ZenMode] Component inactive, rendering null.');
+      // Ensure audio stops if component becomes inactive suddenly
+      if (audioRef.current && !audioRef.current.paused) {
+          console.log('[ZenMode] Ensuring audio pause on inactive render.');
+          audioRef.current.pause();
+      }
+      return null;
+  }
+
+  // Component is active: Render only the audio element (conditionally on error)
+  // The UI (overlay, content, controls) is completely removed.
   return (
-    <div className="zen-mode-overlay">
-      <div className="zen-mode-content">
-        <h2>Zen Mode</h2>
-        
-        {audioError ? (
-          <div className="error-message">
-            <p>Unable to load the audio file. The MP3 file may be missing or corrupted.</p>
-            <p>Please add a valid MP3 file named "calming-rain.mp3" to the "public/music" directory.</p>
-            <p>Current path: {currentTrack.path}</p>
-            <p className="note">Note: The current placeholder is not a valid MP3 file. You need to replace it with an actual MP3 audio file.</p>
-          </div>
-        ) : (
-          <>
-            <p>Relax and focus with ambient sounds.</p>
-            
-            <div className="track-selection">
-              <p className="track-label">Current track: {currentTrack.emoji} {currentTrack.name}</p>
-              
-              {AUDIO_TRACKS.length > 1 && (
-                <div className="track-buttons">
-                  {AUDIO_TRACKS.map(track => (
-                    <button
-                      key={track.id}
-                      onClick={() => setCurrentTrackId(track.id)}
-                      className={`track-button ${currentTrackId === track.id ? 'active' : ''}`}
-                    >
-                      {track.emoji} {track.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div className="volume-control-container">
-              <label 
-                htmlFor="volume-control" 
-                className="volume-label"
-              >
-                Volume: {volume}%
-              </label>
-              <input
-                id="volume-control"
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => setVolume(parseInt(e.target.value))}
-                className="volume-slider"
-              />
-            </div>
-          </>
-        )}
-        
-        <button
-          onClick={onClose}
-          className="exit-button"
-        >
-          Exit Zen Mode
-        </button>
-      </div>
-      
+    <>
+      {/* Audio element is always rendered when active and no error */}
       {!audioError && (
         <audio
           ref={audioRef}
           src={currentTrack.path}
           loop
           preload="auto"
-          style={{ display: 'none' }}
+          style={{ display: 'none' }} // Keep hidden, it's controlled programmatically
           onLoadedData={handleAudioLoaded}
           onError={handleAudioError}
+          onCanPlay={handleCanPlay}
+          onWaiting={handleWaiting}
+          onPlaying={handlePlaying}
+          onPause={handlePause}
         />
       )}
-    </div>
+
+      {/* Render error message if audio fails, but without the full UI */}
+      {audioError && (
+          <div style={{ position: 'fixed', bottom: '10px', left: '10px', background: 'rgba(255,0,0,0.7)', color: 'white', padding: '10px', borderRadius: '5px', zIndex: 1000 }}>
+              <p><strong>Zen Mode Audio Error:</strong> {audioError.message || 'Unknown error'}</p>
+              <p>Path: {currentTrack.path}</p>
+              <button onClick={() => setAudioError(null)} style={{ marginLeft: '10px', padding: '2px 5px' }}>Retry</button>
+          </div>
+      )}
+      {/* No UI Overlay is rendered */}
+    </>
   );
-} 
+}
