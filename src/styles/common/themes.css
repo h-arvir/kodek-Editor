@@ -1,11 +1,11 @@
 :root {
   /* Common variables used across themes */
-  --primary: #8b5cf6;
-  --primary-dark: #6d28d9;
-  --primary-light: #a78bfa;
-  --primary-lighter: #c4b5fd;
-  --primary-glow: rgba(139, 92, 246, 0.3);
-  --primary-transparent: rgba(139, 92, 246, 0.1);
+  --primary: #9b5de5; /* Updated to new primary color */
+  --primary-dark: #8347c5; /* Darker shade of primary */
+  --primary-light: #b37eeb; /* Lighter shade of primary */
+  --primary-lighter: #d0b0f5; /* Even lighter shade of primary */
+  --primary-glow: rgba(155, 93, 229, 0.3); /* Primary color glow */
+  --primary-transparent: rgba(155, 93, 229, 0.1); /* Transparent primary */
 }
 
 /* Dark theme (default) */
@@ -17,6 +17,7 @@
   --panel-bg: #0a0a0a;
   --panel-header: #0f0f0f;
   --input-bg: #121212;
+  --editor-bg: #1e1e1e; /* Default dark editor background */
 
   /* Text colors */
   --text: #f8f9fa;
@@ -25,7 +26,7 @@
   /* Borders */
   --border: #222222;
   --border-light: #333333;
-  --border-glow: rgba(139, 92, 246, 0.2);
+  --border-glow: rgba(155, 93, 229, 0.2); /* Updated to new primary color */
   
   /* Dock styling */
   --dock-bg: #060606;
@@ -40,46 +41,47 @@
   --dock-label-text: #fff;
   
   /* Editor specific */
-  --editor-cursor-shadow: rgba(139, 92, 246, 0.3);
-  --editor-selection-bg: rgba(139, 92, 246, 0.2);
+  --editor-cursor-shadow: rgba(155, 93, 229, 0.3); /* Updated to new primary color */
+  --editor-selection-bg: rgba(155, 93, 229, 0.2); /* Updated to new primary color */
 }
 
-/* Light theme (VS Code Light+ inspired) */
+/* Light theme (Purple & Light Blue) */
 .light {
-  /* Backgrounds */
-  --bg-dark: #ffffff; /* Main white background */
-  --bg-darker: #f3f3f3; /* Slightly darker areas like side panels */
-  --card-bg: #ffffff; /* Keep cards crisp */
-  --panel-bg: #e7e7e7; /* Panels are lighter gray */
-  --panel-header: #d4d4d4; /* Headers with light border feel */
-  --input-bg: #ffffff; /* Inputs pure white */
+  /* Backgrounds - light blue tones */
+  --bg-dark: #ffffff; /* Clean white background */
+  --bg-darker: #f0f8ff; /* Very light blue for side panels */
+  --card-bg: #ffffff; /* White for cards */
+  --panel-bg: #e6f5fd; /* Light blue for panels */
+  --panel-header: #d0f0fd; /* Secondary color for headers */
+  --input-bg: #ffffff; /* White input background */
+  --editor-bg: #f0f0f0; /* Light grey specifically for code editor */
 
   /* Text colors */
-  --text: #333333; /* Standard dark text */
-  --text-secondary: #555555; /* Lighter but readable secondary text */
+  --text: #333333; /* Dark grey for text */
+  --text-secondary: #666666; /* Medium grey for secondary text */
 
-  /* Borders */
-  --border: #cccccc; /* Clean borders like VS Code */
-  --border-light: #e5e5e5; /* Light borders for subtle separation */
-  --border-glow: rgba(0, 122, 204, 0.15); /* Blueish border glow (matching cursor/highlight) */
+  /* Borders - with primary color accents */
+  --border: #d0f0fd; /* Secondary color for borders */
+  --border-light: #e6f5fd; /* Lighter version of secondary */
+  --border-glow: rgba(155, 93, 229, 0.15); /* Primary color glow */
 
-  /* Dock styling */
-  --dock-bg: #f3f3f3; 
-  --dock-border: #cccccc;
+  /* Dock styling - with primary and secondary colors */
+  --dock-bg: #f0f8ff; 
+  --dock-border: #d0f0fd;
   --dock-item-bg: #ffffff;
-  --dock-item-border: #cccccc;
-  --dock-item-hover-bg: #eaeaea;
-  --dock-item-hover-border: #999999;
-  --dock-item-active-bg: #d6d6d6;
+  --dock-item-border: #d0f0fd;
+  --dock-item-hover-bg: #e6f5fd;
+  --dock-item-hover-border: #9b5de5;
+  --dock-item-active-bg: #d0f0fd;
   --dock-label-bg: #ffffff;
-  --dock-label-border: #cccccc;
+  --dock-label-border: #d0f0fd;
   --dock-label-text: var(--text);
 
-  /* Editor specific */
-  --editor-cursor-shadow: rgba(0, 122, 204, 0.25); /* Blue glow like VS Code cursor */
-  --editor-selection-bg: rgba(0, 122, 204, 0.2); /* Blue selection like in Light+ */
+  /* Editor specific - primary color highlights */
+  --editor-cursor-shadow: rgba(155, 93, 229, 0.25); /* Primary color cursor glow */
+  --editor-selection-bg: rgba(155, 93, 229, 0.2); /* Primary color selection */
 
   /* Custom: Output panel specific for light theme */
   --output-panel-bg-light: #2d2d2d; /* Dark grey background for output */
-  --output-panel-text-light: #e0e0e0; /* Light text for dark output background */
+  --output-panel-text-light: #ffffff; /* White text for dark output background */
 }

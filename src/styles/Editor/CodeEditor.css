@@ -62,7 +62,7 @@ body.editor-fullscreen .dock-container {
   flex: 1;
   height: 100%;
   overflow: hidden;
-  background-color: var(--bg-darker);
+  background-color: var(--editor-bg, var(--bg-darker));
 }
 
 /* Make editor take full width when in fullscreen mode */
@@ -76,7 +76,25 @@ body.editor-fullscreen .dock-container {
 }
 
 .monaco-editor .selected-text {
-  background-color: rgba(139, 92, 246, 0.2) !important;
+  background-color: rgba(155, 93, 229, 0.2) !important; /* Updated to new primary color */
+}
+
+/* Force light grey background for Monaco editor in light mode */
+.light .monaco-editor .monaco-editor-background,
+.light .monaco-editor .margin-view-overlays,
+.light .monaco-editor .margin {
+  background-color: #f0f0f0 !important;
+}
+
+/* Add primary color accents to editor in light mode */
+.light .monaco-editor .cursor {
+  background-color: #9b5de5 !important;
+  border-color: #9b5de5 !important;
+}
+
+/* Add secondary color accents to editor in light mode */
+.light .monaco-editor .line-numbers {
+  color: #666666 !important;
 }
 
 /* Rest of editor styles */
@@ -98,4 +116,5 @@ body.editor-fullscreen .dock-container {
   flex-grow: 1;
   height: 100%;
   position: relative;
+  background-color: var(--editor-bg, var(--bg-darker));
 }

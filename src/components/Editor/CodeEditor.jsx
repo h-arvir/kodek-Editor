@@ -1,8 +1,8 @@
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
 
 import '../../styles/Editor/CodeEditor.css';
 
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 
 import {
   VscTerminalPowershell,
@@ -15,6 +15,31 @@ import Dock from '../../../reactbits/dock';
 import { ChatDock } from '../Chat/ChatDock';
 import { useCollaboration } from '../../context/collabration';
 import { useTheme } from '../../context/theme';
+
+// Define a function to configure custom Monaco themes
+const configureMonacoThemes = (monaco) => {
+  console.log('Configuring Monaco themes...');
+  
+  // Define a custom light theme with grey background
+  monaco.editor.defineTheme('kodek-light-grey', {
+    base: 'vs', // Use VS light as the base
+    inherit: true, // Inherit rules from the base theme
+    rules: [], // No custom token rules
+    colors: {
+      // Set the editor background to light grey
+      'editor.background': '#f0f0f0',
+      'editor.foreground': '#333333',
+      'editorLineNumber.foreground': '#666666',
+      'editorCursor.foreground': '#9b5de5', // Primary color for cursor
+      'editor.selectionBackground': 'rgba(155, 93, 229, 0.2)', // Primary color for selection
+      'editor.inactiveSelectionBackground': 'rgba(155, 93, 229, 0.1)',
+      'editorLineHighlight.background': '#e6f5fd', // Secondary color for line highlight
+      'editor.lineHighlightBorder': '#d0f0fd', // Secondary color for line highlight border
+    }
+  });
+  
+  console.log('Custom theme defined: kodek-light-grey');
+};
 
 export const CodeEditor = memo(
   ({
@@ -32,6 +57,33 @@ export const CodeEditor = memo(
     const [isChatOpen, setIsChatOpen] = useState(false);
     const { unreadCount } = useCollaboration();
     const { theme, toggleTheme, isDark } = useTheme();
+    
+    // Configure Monaco themes when the component mounts
+    useEffect(() => {
+      // Configure Monaco themes when loader is ready
+      loader.init().then(monaco => {
+        configureMonacoThemes(monaco);
+      });
+    }, []);
+    
+    // Wrap the original handleEditorDidMount to ensure our theme is applied
+    const wrappedEditorDidMount = (editor, monaco) => {
+      console.log('Editor mounted, applying custom theme...');
+      
+      // Apply our custom theme configuration
+      configureMonacoThemes(monaco);
+      
+      // Explicitly set the theme on the editor instance if in light mode
+      if (!isDark) {
+        console.log('Setting editor theme to kodek-light-grey');
+        monaco.editor.setTheme('kodek-light-grey');
+      }
+      
+      // Call the original handleEditorDidMount if provided
+      if (handleEditorDidMount) {
+        handleEditorDidMount(editor, monaco);
+      }
+    };
     
     // Handle the toggle output with additional debugging
     const handleToggleOutput = () => {
@@ -182,8 +234,8 @@ export const CodeEditor = memo(
               language={language}
               value={code}
               onChange={handleCodeChange}
-              theme={isDark ? "vs-dark" : "light"}
-              onMount={handleEditorDidMount}
+              theme={isDark ? "vs-dark" : "kodek-light-grey"}
+              onMount={wrappedEditorDidMount}
               options={{
                 fontSize: 14,
                 fontFamily: "'Fira Code', 'Consolas', monospace",
@@ -201,6 +253,8 @@ export const CodeEditor = memo(
                 automaticLayout: true,
                 wordWrap: 'on',
                 renderLineHighlight: 'all',
+                // Set the background color directly in the editor options
+                ...(isDark ? {} : { backgroundColor: '#f0f0f0' }),
                 scrollbar: {
                   verticalScrollbarSize: 8,
                   horizontalScrollbarSize: 8,
