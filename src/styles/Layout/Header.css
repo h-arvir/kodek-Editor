@@ -1,10 +1,21 @@
 .header {
   padding: 0.75rem 1.5rem;
-  background-color: rgba(10, 10, 10, 0.8);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
   z-index: 100;
+}
+
+/* Dark theme header (default) */
+.dark .header {
+  background-color: rgba(10, 10, 10, 0.8);
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Light theme header */
+.light .header {
+  background-color: rgba(241, 186, 136, 0.15); /* F1BA88 with transparency */
+  box-shadow: 0 1px 10px rgba(3, 167, 145, 0.1); /* 03A791 shadow */
+  border-bottom: 1px solid rgba(3, 167, 145, 0.2); /* 03A791 border */
 }
 
 .header-content {
@@ -45,20 +56,51 @@
 .current-user-badge {
   display: flex;
   flex-direction: column;
-  background-color: rgba(15, 15, 15, 0.6);
   border-radius: 8px;
   padding: 0.4rem 0.8rem;
   min-width: 120px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
   transition: all 0.3s ease;
 }
 
+/* Dark theme badges */
+.dark .room-badge,
+.dark .users-badge,
+.dark .current-user-badge {
+  background-color: rgba(15, 15, 15, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Light theme badges */
+.light .room-badge,
+.light .users-badge,
+.light .current-user-badge {
+  background-color: rgba(233, 245, 190, 0.7); /* E9F5BE with transparency */
+  box-shadow: 0 2px 8px rgba(3, 167, 145, 0.08); /* 03A791 shadow */
+  border-color: rgba(129, 231, 175, 0.4); /* 81E7AF border */
+}
+
+/* Hover effects for both themes */
 .room-badge:hover,
 .users-badge:hover,
 .current-user-badge:hover {
   border-color: var(--primary);
+}
+
+/* Dark theme hover effect */
+.dark .room-badge:hover,
+.dark .users-badge:hover,
+.dark .current-user-badge:hover {
   box-shadow: 0 0 8px var(--primary-glow);
+}
+
+/* Light theme hover effect */
+.light .room-badge:hover,
+.light .users-badge:hover,
+.light .current-user-badge:hover {
+  box-shadow: 0 0 12px rgba(3, 167, 145, 0.3); /* 03A791 glow */
+  border-color: rgba(3, 167, 145, 0.8); /* 03A791 border highlight */
+  background-color: rgba(233, 245, 190, 0.9); /* E9F5BE with higher opacity */
 }
 
 /* glows the "you" button
@@ -84,13 +126,22 @@
   font-weight: 500;
 }
 
+/* Room ID styling for both themes */
 .room-id {
   color: var(--primary-lighter);
+}
+
+/* Dark theme text shadows */
+.dark .room-id,
+.dark .current-user-name {
   text-shadow: 0 0 5px var(--primary-glow);
 }
 
-.current-user-name {
-  text-shadow: 0 0 5px var(--primary-glow);
+/* Light theme text shadows - more subtle */
+.light .room-id,
+.light .current-user-name {
+  text-shadow: 0 0 3px rgba(3, 167, 145, 0.3); /* 03A791 text shadow */
+  color: rgba(3, 167, 145, 0.9); /* 03A791 text color */
 }
 
 /* Rest of header styles */
