@@ -13,9 +13,9 @@
 
 /* Light theme header */
 .light .header {
-  background-color: rgba(241, 186, 136, 0.15); /* F1BA88 with transparency */
-  box-shadow: 0 1px 10px rgba(3, 167, 145, 0.1); /* 03A791 shadow */
-  border-bottom: 1px solid rgba(3, 167, 145, 0.2); /* 03A791 border */
+  background-color: rgba(252, 255, 193, 0.3); /* FCFFC1 with transparency */
+  box-shadow: 0 1px 10px rgba(251, 158, 198, 0.2); /* FB9EC6 shadow */
+  border-bottom: 1px solid rgba(251, 158, 198, 0.3); /* FB9EC6 border */
 }
 
 .header-content {
@@ -75,9 +75,9 @@
 .light .room-badge,
 .light .users-badge,
 .light .current-user-badge {
-  background-color: rgba(233, 245, 190, 0.7); /* E9F5BE with transparency */
-  box-shadow: 0 2px 8px rgba(3, 167, 145, 0.08); /* 03A791 shadow */
-  border-color: rgba(129, 231, 175, 0.4); /* 81E7AF border */
+  background-color: rgba(255, 232, 147, 0.7); /* FFE893 with transparency */
+  box-shadow: 0 2px 8px rgba(251, 180, 165, 0.15); /* FBB4A5 shadow */
+  border-color: rgba(251, 158, 198, 0.4); /* FB9EC6 border */
 }
 
 /* Hover effects for both themes */
@@ -98,9 +98,9 @@
 .light .room-badge:hover,
 .light .users-badge:hover,
 .light .current-user-badge:hover {
-  box-shadow: 0 0 12px rgba(3, 167, 145, 0.3); /* 03A791 glow */
-  border-color: rgba(3, 167, 145, 0.8); /* 03A791 border highlight */
-  background-color: rgba(233, 245, 190, 0.9); /* E9F5BE with higher opacity */
+  box-shadow: 0 0 12px rgba(251, 180, 165, 0.4); /* FBB4A5 glow */
+  border-color: rgba(251, 158, 198, 0.8); /* FB9EC6 border highlight */
+  background-color: rgba(255, 232, 147, 0.9); /* FFE893 with higher opacity */
 }
 
 /* glows the "you" button
@@ -140,8 +140,8 @@
 /* Light theme text shadows - more subtle */
 .light .room-id,
 .light .current-user-name {
-  text-shadow: 0 0 3px rgba(3, 167, 145, 0.3); /* 03A791 text shadow */
-  color: rgba(3, 167, 145, 0.9); /* 03A791 text color */
+  text-shadow: 0 0 4px rgba(251, 158, 198, 0.4); /* FB9EC6 text shadow */
+  color: rgba(251, 158, 198, 1); /* FB9EC6 text color */
 }
 
 /* Rest of header styles */

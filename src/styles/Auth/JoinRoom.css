@@ -15,6 +15,18 @@
       transparent 50%);
 }
 
+/* Light theme join container */
+.light .join-container {
+  background-color: #FCFFC1; /* Pastel yellow background */
+  background-image:
+    radial-gradient(circle at 10% 20%,
+      rgba(251, 158, 198, 0.1) 0%, /* FB9EC6 with transparency */
+      transparent 50%),
+    radial-gradient(circle at 90% 80%,
+      rgba(251, 180, 165, 0.1) 0%, /* FBB4A5 with transparency */
+      transparent 50%);
+}
+
 .join-form {
   background-color: rgba(12, 12, 12, 0.2);
   backdrop-filter: blur(10px);
@@ -35,6 +47,23 @@
     0 15px 50px rgba(0, 0, 0, 0.5),
     0 0 30px var(--primary-glow);
   border-color: var(--primary-transparent);
+}
+
+/* Light theme join form */
+.light .join-form {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 10px 40px rgba(251, 158, 198, 0.2),
+    0 0 20px rgba(251, 158, 198, 0.3);
+  border: 1px solid rgba(251, 158, 198, 0.3);
+}
+
+.light .join-form:hover {
+  box-shadow:
+    0 15px 50px rgba(251, 158, 198, 0.3),
+    0 0 30px rgba(251, 158, 198, 0.4);
+  border-color: rgba(251, 158, 198, 0.5);
 }
 
 .join-logo {
@@ -97,6 +126,20 @@
   outline: none;
 }
 
+/* Light theme input fields */
+.light .input-group input {
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(251, 158, 198, 0.3);
+  color: #333333;
+}
+
+.light .input-group input:focus {
+  border-color: #FB9EC6;
+  box-shadow:
+    0 0 0 2px rgba(251, 158, 198, 0.2),
+    0 0 10px rgba(251, 158, 198, 0.3);
+}
+
 .input-group svg {
   position: absolute;
   left: 1rem;
@@ -140,6 +183,29 @@
 .join-button:disabled {
   background-color: var(--border);
   border-color: var(--border);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Light theme join button */
+.light .join-button {
+  background-color: rgba(251, 158, 198, 0.2);
+  color: #333333;
+  border: 1px solid #FB9EC6;
+  box-shadow: 0 0 15px rgba(251, 158, 198, 0.3);
+}
+
+.light .join-button:hover:not(:disabled) {
+  background-color: rgba(251, 158, 198, 0.8);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(251, 158, 198, 0.4);
+}
+
+.light .join-button:disabled {
+  background-color: rgba(200, 200, 200, 0.5);
+  border-color: rgba(200, 200, 200, 0.8);
+  color: #666666;
   cursor: not-allowed;
   box-shadow: none;
 }

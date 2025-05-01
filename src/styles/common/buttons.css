@@ -28,6 +28,21 @@
   box-shadow: none;
 }
 
+/* Light theme buttons */
+.light .button {
+  background: rgba(251, 158, 198, 0.2); /* FB9EC6 with transparency */
+  color: #333333;
+  border: 1px solid #FB9EC6;
+  box-shadow: 0 0 10px rgba(251, 158, 198, 0.3);
+}
+
+.light .button:hover:not(:disabled) {
+  background: rgba(251, 158, 198, 0.8);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(251, 158, 198, 0.4);
+}
+
 .button-secondary {
   display: flex;
   align-items: center;
@@ -50,4 +65,17 @@
   border-color: var(--primary);
   color: var(--primary-light);
   box-shadow: 0 0 8px var(--primary-glow);
+}
+
+/* Light theme secondary buttons */
+.light .button-secondary {
+  background: transparent;
+  color: #333333;
+  border: 1px solid rgba(251, 180, 165, 0.4); /* FBB4A5 with transparency */
+}
+
+.light .button-secondary:hover {
+  border-color: #FB9EC6;
+  color: #FB9EC6;
+  box-shadow: 0 0 8px rgba(251, 158, 198, 0.3);
 }

@@ -79,22 +79,28 @@ body.editor-fullscreen .dock-container {
   background-color: rgba(155, 93, 229, 0.2) !important; /* Updated to new primary color */
 }
 
-/* Force light grey background for Monaco editor in light mode */
+/* Force pastel yellow background for Monaco editor in light mode */
 .light .monaco-editor .monaco-editor-background,
 .light .monaco-editor .margin-view-overlays,
 .light .monaco-editor .margin {
-  background-color: #f0f0f0 !important;
+  background-color: rgba(252, 255, 193, 0.2) !important; /* FCFFC1 with transparency */
 }
 
-/* Add primary color accents to editor in light mode */
+/* Add pink color accents to editor in light mode */
 .light .monaco-editor .cursor {
-  background-color: #9b5de5 !important;
-  border-color: #9b5de5 !important;
+  background-color: #FB9EC6 !important; /* Pink cursor */
+  border-color: #FB9EC6 !important;
+  box-shadow: 0 0 8px rgba(251, 158, 198, 0.5) !important; /* Pink glow */
 }
 
-/* Add secondary color accents to editor in light mode */
+/* Add peach color accents to editor in light mode */
 .light .monaco-editor .line-numbers {
-  color: #666666 !important;
+  color: rgba(251, 180, 165, 0.8) !important; /* FBB4A5 line numbers */
+}
+
+/* Selection color in light mode */
+.light .monaco-editor .selected-text {
+  background-color: rgba(255, 232, 147, 0.4) !important; /* FFE893 selection */
 }
 
 /* Rest of editor styles */

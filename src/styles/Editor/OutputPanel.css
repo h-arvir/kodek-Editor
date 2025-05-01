@@ -12,6 +12,12 @@
   border-left: 1px solid var(--border);
 }
 
+/* Light theme terminal styling */
+.light .terminal {
+  background-color: rgba(252, 255, 193, 0.2); /* FCFFC1 with transparency */
+  border-left: 1px solid rgba(251, 158, 198, 0.3); /* FB9EC6 border */
+}
+
 .terminal::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -29,6 +35,21 @@
 .terminal::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
   /* box-shadow: 0 0 8px var(--primary-glow); Removed shadow */
+}
+
+/* Light theme scrollbar */
+.light .terminal::-webkit-scrollbar-track {
+  background: rgba(252, 255, 193, 0.2); /* FCFFC1 with transparency */
+}
+
+.light .terminal::-webkit-scrollbar-thumb {
+  background: rgba(251, 158, 198, 0.4); /* FB9EC6 with transparency */
+  border-radius: 3px;
+}
+
+.light .terminal::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 158, 198, 0.8); /* FB9EC6 with higher opacity */
+  box-shadow: 0 0 8px rgba(251, 158, 198, 0.4); /* Pink glow */
 }
 
 .output-success {
