@@ -10,6 +10,7 @@ import {
   VscComment,
   } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
+import { BsMic } from 'react-icons/bs';
 
 import Dock from '../../../reactbits/dock';
 import { ChatDock } from '../Chat/ChatDock';
@@ -100,6 +101,13 @@ export const CodeEditor = memo(
       console.log('chat button clicked!');
       setIsChatOpen(!isChatOpen);
     };
+    
+    // Handle the audio chat button click
+    const handleAudioChatClick = () => {
+      console.log('audio chat button clicked!');
+      // Placeholder for audio chat functionality
+      alert('Audio chat feature coming soon!');
+    };
 
     const items = [
       // {
@@ -123,6 +131,11 @@ export const CodeEditor = memo(
         ),
         label: 'Chat',
         onClick: handleProfileClick,
+      },
+      {
+        icon: <BsMic size={18} />,
+        label: 'Audio Chat',
+        onClick: handleAudioChatClick,
       },
       {
         icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,

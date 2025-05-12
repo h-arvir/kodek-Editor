@@ -2,7 +2,7 @@
   padding: 0.75rem 1.5rem;
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  z-index: 100;
+  z-index: 1000000;
 }
 
 /* Dark theme header (default) */
