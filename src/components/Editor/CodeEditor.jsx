@@ -10,7 +10,7 @@ import {
   VscComment,
   } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
-import { BsMic } from 'react-icons/bs';
+import { BsMic, BsCameraVideo } from 'react-icons/bs';
 
 import Dock from '../../../reactbits/dock';
 import { ChatDock } from '../Chat/ChatDock';
@@ -108,6 +108,13 @@ export const CodeEditor = memo(
       // Placeholder for audio chat functionality
       alert('Audio chat feature coming soon!');
     };
+    
+    // Handle the video chat button click
+    const handleVideoChatClick = () => {
+      console.log('video chat button clicked!');
+      // Placeholder for video chat functionality
+      alert('Video chat feature coming soon!');
+    };
 
     const items = [
       // {
@@ -136,6 +143,11 @@ export const CodeEditor = memo(
         icon: <BsMic size={18} />,
         label: 'Audio Chat',
         onClick: handleAudioChatClick,
+      },
+      {
+        icon: <BsCameraVideo size={18} />,
+        label: 'Video Chat',
+        onClick: handleVideoChatClick,
       },
       {
         icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
@@ -236,7 +248,7 @@ export const CodeEditor = memo(
               items={items}
               panelHeight={68}
               baseItemSize={60}
-              magnification={70}
+              magnification={62}
             />
             <ChatDock isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
           </div>
