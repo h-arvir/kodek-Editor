@@ -14,6 +14,8 @@ import { BsMic, BsCameraVideo } from 'react-icons/bs';
 
 import Dock from '../../../reactbits/dock';
 import { ChatDock } from '../Chat/ChatDock';
+import { AudioChat } from '../Audio/AudioChat';
+import { VideoChat } from '../Audio/VideoChat';
 import { useCollaboration } from '../../context/collabration';
 import { useTheme } from '../../context/theme';
 
@@ -56,6 +58,8 @@ export const CodeEditor = memo(
     ...props
   }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [isAudioChatOpen, setIsAudioChatOpen] = useState(false);
+    const [isVideoChatOpen, setIsVideoChatOpen] = useState(false);
     const { unreadCount } = useCollaboration();
     const { theme, toggleTheme, isDark } = useTheme();
     
@@ -105,15 +109,13 @@ export const CodeEditor = memo(
     // Handle the audio chat button click
     const handleAudioChatClick = () => {
       console.log('audio chat button clicked!');
-      // Placeholder for audio chat functionality
-      alert('Audio chat feature coming soon!');
+      setIsAudioChatOpen(!isAudioChatOpen);
     };
     
     // Handle the video chat button click
     const handleVideoChatClick = () => {
       console.log('video chat button clicked!');
-      // Placeholder for video chat functionality
-      alert('Video chat feature coming soon!');
+      setIsVideoChatOpen(!isVideoChatOpen);
     };
 
     const items = [
@@ -251,6 +253,14 @@ export const CodeEditor = memo(
               magnification={62}
             />
             <ChatDock isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+            <AudioChat 
+              isActive={isAudioChatOpen} 
+              onToggle={() => setIsAudioChatOpen(false)} 
+            />
+            <VideoChat 
+              isActive={isVideoChatOpen} 
+              onToggle={() => setIsVideoChatOpen(false)} 
+            />
           </div>
           <div className="editor-wrapper">
             <Editor

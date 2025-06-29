@@ -456,6 +456,234 @@ io.on('connection', (socket) => {
     io.in(roomId).emit('chatMessage', chatMessage);
   });
 
+  // WebRTC Audio Chat Signaling Events
+  
+  // Handle WebRTC offer
+  socket.on('webrtc-offer', ({ roomId, targetUserId, offer }) => {
+    if (!roomId || !targetUserId || !offer || !currentRoom || roomId !== currentRoom) {
+      console.log('Invalid WebRTC offer:', { roomId, targetUserId, currentRoom });
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      console.log(`Invalid WebRTC offer: User ${socket.id} not in room ${roomId}`);
+      return;
+    }
+    
+    console.log(`WebRTC offer from ${socket.id} to ${targetUserId} in room ${roomId}`);
+    
+    // Forward the offer to the target user
+    io.to(targetUserId).emit('webrtc-offer', {
+      fromUserId: socket.id,
+      offer: offer
+    });
+  });
+  
+  // Handle WebRTC answer
+  socket.on('webrtc-answer', ({ roomId, targetUserId, answer }) => {
+    if (!roomId || !targetUserId || !answer || !currentRoom || roomId !== currentRoom) {
+      console.log('Invalid WebRTC answer:', { roomId, targetUserId, currentRoom });
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      console.log(`Invalid WebRTC answer: User ${socket.id} not in room ${roomId}`);
+      return;
+    }
+    
+    console.log(`WebRTC answer from ${socket.id} to ${targetUserId} in room ${roomId}`);
+    
+    // Forward the answer to the target user
+    io.to(targetUserId).emit('webrtc-answer', {
+      fromUserId: socket.id,
+      answer: answer
+    });
+  });
+  
+  // Handle ICE candidates
+  socket.on('webrtc-ice-candidate', ({ roomId, targetUserId, candidate }) => {
+    if (!roomId || !targetUserId || !candidate || !currentRoom || roomId !== currentRoom) {
+      console.log('Invalid ICE candidate:', { roomId, targetUserId, currentRoom });
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      console.log(`Invalid ICE candidate: User ${socket.id} not in room ${roomId}`);
+      return;
+    }
+    
+    // Forward the ICE candidate to the target user
+    io.to(targetUserId).emit('webrtc-ice-candidate', {
+      fromUserId: socket.id,
+      candidate: candidate
+    });
+  });
+  
+  // Handle audio chat join/leave notifications
+  socket.on('audio-chat-join', ({ roomId }) => {
+    if (!roomId || !currentRoom || roomId !== currentRoom) {
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      return;
+    }
+    
+    const roomData = rooms.get(roomId);
+    const userInfo = roomData.get(socket.id);
+    
+    if (!userInfo) {
+      return;
+    }
+    
+    console.log(`User ${userInfo.username} joined audio chat in room ${roomId}`);
+    
+    // Notify other users that this user joined audio chat
+    socket.to(roomId).emit('user-joined-audio', {
+      userId: socket.id,
+      username: userInfo.username
+    });
+  });
+  
+  socket.on('audio-chat-leave', ({ roomId }) => {
+    if (!roomId || !currentRoom || roomId !== currentRoom) {
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      return;
+    }
+    
+    const roomData = rooms.get(roomId);
+    const userInfo = roomData.get(socket.id);
+    
+    if (!userInfo) {
+      return;
+    }
+    
+    console.log(`User ${userInfo.username} left audio chat in room ${roomId}`);
+    
+    // Notify other users that this user left audio chat
+    socket.to(roomId).emit('user-left-audio', {
+      userId: socket.id,
+      username: userInfo.username
+    });
+  });
+
+  // WebRTC Video Chat Signaling Events
+  
+  // Handle WebRTC video offer
+  socket.on('webrtc-video-offer', ({ roomId, targetUserId, offer }) => {
+    if (!roomId || !targetUserId || !offer || !currentRoom || roomId !== currentRoom) {
+      console.log('Invalid WebRTC video offer:', { roomId, targetUserId, currentRoom });
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      console.log(`Invalid WebRTC video offer: User ${socket.id} not in room ${roomId}`);
+      return;
+    }
+    
+    console.log(`WebRTC video offer from ${socket.id} to ${targetUserId} in room ${roomId}`);
+    
+    // Forward the offer to the target user
+    io.to(targetUserId).emit('webrtc-video-offer', {
+      fromUserId: socket.id,
+      offer: offer
+    });
+  });
+  
+  // Handle WebRTC video answer
+  socket.on('webrtc-video-answer', ({ roomId, targetUserId, answer }) => {
+    if (!roomId || !targetUserId || !answer || !currentRoom || roomId !== currentRoom) {
+      console.log('Invalid WebRTC video answer:', { roomId, targetUserId, currentRoom });
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      console.log(`Invalid WebRTC video answer: User ${socket.id} not in room ${roomId}`);
+      return;
+    }
+    
+    console.log(`WebRTC video answer from ${socket.id} to ${targetUserId} in room ${roomId}`);
+    
+    // Forward the answer to the target user
+    io.to(targetUserId).emit('webrtc-video-answer', {
+      fromUserId: socket.id,
+      answer: answer
+    });
+  });
+  
+  // Handle video ICE candidates
+  socket.on('webrtc-video-ice-candidate', ({ roomId, targetUserId, candidate }) => {
+    if (!roomId || !targetUserId || !candidate || !currentRoom || roomId !== currentRoom) {
+      console.log('Invalid video ICE candidate:', { roomId, targetUserId, currentRoom });
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      console.log(`Invalid video ICE candidate: User ${socket.id} not in room ${roomId}`);
+      return;
+    }
+    
+    // Forward the ICE candidate to the target user
+    io.to(targetUserId).emit('webrtc-video-ice-candidate', {
+      fromUserId: socket.id,
+      candidate: candidate
+    });
+  });
+  
+  // Handle video chat join/leave notifications
+  socket.on('video-chat-join', ({ roomId }) => {
+    if (!roomId || !currentRoom || roomId !== currentRoom) {
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      return;
+    }
+    
+    const roomData = rooms.get(roomId);
+    const userInfo = roomData.get(socket.id);
+    
+    if (!userInfo) {
+      return;
+    }
+    
+    console.log(`User ${userInfo.username} joined video chat in room ${roomId}`);
+    
+    // Notify other users that this user joined video chat
+    socket.to(roomId).emit('user-joined-video', {
+      userId: socket.id,
+      username: userInfo.username
+    });
+  });
+  
+  socket.on('video-chat-leave', ({ roomId }) => {
+    if (!roomId || !currentRoom || roomId !== currentRoom) {
+      return;
+    }
+    
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
+      return;
+    }
+    
+    const roomData = rooms.get(roomId);
+    const userInfo = roomData.get(socket.id);
+    
+    if (!userInfo) {
+      return;
+    }
+    
+    console.log(`User ${userInfo.username} left video chat in room ${roomId}`);
+    
+    // Notify other users that this user left video chat
+    socket.to(roomId).emit('user-left-video', {
+      userId: socket.id,
+      username: userInfo.username
+    });
+  });
+
   // Handle disconnection
   socket.on('disconnect', (reason) => {
     console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
