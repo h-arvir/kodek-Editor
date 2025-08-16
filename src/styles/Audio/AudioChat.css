@@ -3,8 +3,8 @@
   /* top: 20px; */
   bottom: 20px;
   right: 20px;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 16px;
   min-width: 280px;
@@ -17,7 +17,7 @@
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--color-foreground);
 }
 
 .audio-chat-error {
@@ -27,7 +27,7 @@
   padding: 12px;
   margin-bottom: 12px;
   font-size: 14px;
-  color: var(--text);
+  color: var(--color-foreground);
 }
 
 .audio-chat-controls {
@@ -48,6 +48,12 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.audio-chat-button svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .audio-chat-button:disabled {
@@ -81,15 +87,23 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg-secondary);
-  color: var(--text);
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
+  color: var(--color-foreground);
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.audio-chat-mute-button svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .audio-chat-mute-button:hover {
-  background: var(--bg-hover);
+  background: var(--color-accent);
 }
 
 .audio-chat-mute-button.muted {
@@ -98,9 +112,13 @@
   border-color: #ef4444;
 }
 
+.audio-chat-mute-button.muted svg {
+  color: white;
+}
+
 .audio-chat-status {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--color-muted-foreground);
 }
 
 .audio-chat-spinner {

@@ -273,10 +273,11 @@ export const AudioChat = ({ isActive, onToggle }) => {
   const handleToggle = useCallback(() => {
     if (isConnected) {
       stopAudioChat();
+      onToggle(); // Only close dialog when leaving audio chat
     } else {
       startAudioChat();
+      // Don't call onToggle() when joining - keep dialog open
     }
-    onToggle();
   }, [isConnected, startAudioChat, stopAudioChat, onToggle]);
   
   // Set up socket event listeners

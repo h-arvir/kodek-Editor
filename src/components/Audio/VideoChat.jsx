@@ -329,10 +329,11 @@ export const VideoChat = ({ isActive, onToggle }) => {
   const handleToggle = useCallback(() => {
     if (isConnected) {
       stopVideoChat();
+      onToggle(); // Only close dialog when leaving video chat
     } else {
       startVideoChat();
+      // Don't call onToggle() when joining - keep dialog open
     }
-    onToggle();
   }, [isConnected, startVideoChat, stopVideoChat, onToggle]);
   
   // Set up socket event listeners
