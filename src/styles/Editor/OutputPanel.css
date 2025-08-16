@@ -72,4 +72,52 @@
   font-size: 0.75rem;
 }
 
+/* Output Panel Animation Styles */
+.output-panel {
+  flex: 1;
+  min-width: 0; /* Allow flex item to shrink below content size */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: right center;
+  overflow: hidden;
+}
+
+.output-panel.visible {
+  flex: 1;
+  transform: translateX(0);
+  opacity: 1;
+  width: auto;
+}
+
+.output-panel.hidden {
+  flex: 0;
+  transform: translateX(100%);
+  opacity: 0;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ensure smooth animation for panel header */
+.output-panel.hidden .panel-header {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.output-panel.visible .panel-header {
+  opacity: 1;
+  transition: opacity 0.3s ease 0.1s; /* Slight delay for smoother appearance */
+}
+
+/* Ensure smooth animation for terminal content */
+.output-panel.hidden .terminal {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.output-panel.visible .terminal {
+  opacity: 1;
+  transition: opacity 0.3s ease 0.1s; /* Slight delay for smoother appearance */
+}
+
 /* Rest of output panel styles */

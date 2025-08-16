@@ -5,6 +5,8 @@
   overflow: hidden;
   gap: 2px;
   background-color: var(--bg-darker);
+  /* Ensure smooth transitions for child elements */
+  transition: all 0.3s ease;
 }
 
 .panel {
@@ -25,6 +27,7 @@
 
 .panel:last-child {
   flex: 1;
+  /* Allow the output panel to handle its own flex behavior for animations */
 }
 
 .panel.fullscreen {

@@ -12,16 +12,14 @@ export const OutputPanel = ({
     console.log('OutputPanel: isOutputVisible changed to:', isOutputVisible);
   }, [isOutputVisible]);
 
-  // Use style display property instead of CSS classes for more direct control
-  const panelStyle = {
-    flex: 1,
-    display: !isOutputVisible || isFullScreen ? 'none' : 'flex',
-  };
+  // Don't render the panel at all when in fullscreen mode
+  if (isFullScreen) {
+    return null;
+  }
 
   return (
     <div
-      className="panel"
-      style={panelStyle}
+      className={`panel output-panel ${isOutputVisible ? 'visible' : 'hidden'}`}
       data-visible={isOutputVisible}
       data-fullscreen={isFullScreen}
     >
