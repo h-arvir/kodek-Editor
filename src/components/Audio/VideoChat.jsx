@@ -513,21 +513,29 @@ export const VideoChat = ({ isActive, onToggle }) => {
           
           {isConnected && (
             <>
-              <button
+              <span
                 onClick={toggleMute}
-                className={`video-chat-control-button ${isMuted ? 'muted' : ''}`}
+                className="video-chat-control-icon"
+                role="button"
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
                 title={isMuted ? 'Unmute' : 'Mute'}
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleMute(); }}
               >
-                {isMuted ? <BsMicMute size={16} /> : <BsMic size={16} />}
-              </button>
+                {isMuted ? <BsMicMute size={20} /> : <BsMic size={20} />}
+              </span>
               
-              <button
+              <span
                 onClick={toggleVideo}
-                className={`video-chat-control-button ${isVideoOff ? 'video-off' : ''}`}
+                className="video-chat-control-icon"
+                role="button"
+                aria-label={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
                 title={isVideoOff ? 'Turn on camera' : 'Turn off camera'}
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleVideo(); }}
               >
-                {isVideoOff ? <BsCameraVideoOff size={16} /> : <BsCameraVideo size={16} />}
-              </button>
+                {isVideoOff ? <BsCameraVideoOff size={20} /> : <BsCameraVideo size={20} />}
+              </span>
             </>
           )}
         </div>

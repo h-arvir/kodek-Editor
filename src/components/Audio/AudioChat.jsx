@@ -416,13 +416,17 @@ export const AudioChat = ({ isActive, onToggle }) => {
           </button>
           
           {isConnected && (
-            <button
+            <span
               onClick={toggleMute}
-              className={`audio-chat-mute-button ${isMuted ? 'muted' : ''}`}
+              className="audio-chat-mute-icon"
+              role="button"
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
               title={isMuted ? 'Unmute' : 'Mute'}
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleMute(); }}
             >
-              {isMuted ? <BsMicMute size={16} /> : <BsMic size={16} />}
-            </button>
+              {isMuted ? <BsMicMute size={20} /> : <BsMic size={20} />}
+            </span>
           )}
         </div>
         

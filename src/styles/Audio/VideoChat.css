@@ -263,6 +263,28 @@
   }
 }
 
+/* New: icon-only controls for mute and camera */
+.video-chat-control-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-foreground); /* white in dark, black in light */
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.video-chat-control-icon:hover {
+  opacity: 0.8;
+}
+
+.video-chat-control-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
 /* Dark theme adjustments */
 [data-theme="dark"] .video-chat-panel {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
