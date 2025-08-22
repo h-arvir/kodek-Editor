@@ -573,3 +573,26 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
   z-index: 10;
 }
+
+/* Bottom-right vertical stack for floating panels */
+.panels-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  max-height: calc(100vh - 40px);
+  z-index: 1000;
+}
+
+/* When inside the stack, let panels flow vertically without overlapping */
+.panels-stack .dock-chat-panel,
+.panels-stack .audio-chat-panel,
+.panels-stack .video-chat-panel {
+  position: static !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+}

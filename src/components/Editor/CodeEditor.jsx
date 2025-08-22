@@ -252,15 +252,17 @@ export const CodeEditor = memo(
               baseItemSize={60}
               magnification={62}
             />
-            <ChatDock isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
-            <AudioChat 
-              isActive={isAudioChatOpen} 
-              onToggle={() => setIsAudioChatOpen(false)} 
-            />
-            <VideoChat 
-              isActive={isVideoChatOpen} 
-              onToggle={() => setIsVideoChatOpen(false)} 
-            />
+            <div className="panels-stack">
+              <ChatDock isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+              <AudioChat 
+                isActive={isAudioChatOpen} 
+                onToggle={() => setIsAudioChatOpen(false)} 
+              />
+              <VideoChat 
+                isActive={isVideoChatOpen} 
+                onToggle={() => setIsVideoChatOpen(false)} 
+              />
+            </div>
           </div>
           <div className="editor-wrapper">
             <Editor

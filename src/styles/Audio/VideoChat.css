@@ -1,7 +1,8 @@
 .video-chat-panel {
   position: fixed;
   bottom: 20px;
-  left: 20px;
+  right: 20px;
+  left: auto;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 12px;
