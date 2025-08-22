@@ -79,42 +79,7 @@
   background: #dc2626;
 }
 
-.audio-chat-mute-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-secondary);
-  color: var(--color-foreground);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 16px;
-  line-height: 1;
-}
 
-.audio-chat-mute-button svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-
-.audio-chat-mute-button:hover {
-  background: var(--color-accent);
-}
-
-.audio-chat-mute-button.muted {
-  background: #ef4444;
-  color: white;
-  border-color: #ef4444;
-}
-
-.audio-chat-mute-button.muted svg {
-  color: white;
-}
 
 .audio-chat-status {
   font-size: 14px;
