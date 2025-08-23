@@ -255,37 +255,15 @@ const File = forwardRef(
       <div
         ref={ref}
         className={cn(
-          "flex w-fit items-center gap-1 pr-1 text-sm rtl:pl-1 rtl:pr-0",
+          "flex w-full items-center gap-1 pr-1 text-sm rtl:pl-1 rtl:pr-0",
           direction === "rtl" ? "rtl" : "ltr",
           className
         )}
       >
         {fileIcon ?? <FileIcon className="size-4" />}
-        <span
-          role="button"
-          tabIndex={isSelectable ? 0 : -1}
-          aria-disabled={!isSelectable}
-          className={cn(
-            "truncate",
-            isSelectable ? "cursor-pointer" : "cursor-not-allowed opacity-50",
-            isSelected && isSelectable ? "bg-muted rounded px-1" : null
-          )}
-          onClick={() => {
-            if (!isSelectable) return;
-            selectItem(value);
-            if (typeof props?.onClick === "function") props.onClick();
-          }}
-          onKeyDown={(e) => {
-            if (!isSelectable) return;
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              selectItem(value);
-              if (typeof props?.onClick === "function") props.onClick();
-            }
-          }}
-        >
+        <div className="flex-1 min-w-0">
           {children}
-        </span>
+        </div>
       </div>
     );
   }

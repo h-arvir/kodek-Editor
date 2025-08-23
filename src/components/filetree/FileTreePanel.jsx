@@ -60,10 +60,17 @@ function TreeNodes({ nodes, selectedId, onSelect, onAddFile, onAddFolder, onRena
             key={node.id}
             value={node.id}
             isSelect={selectedId === node.id}
-            onClick={() => onSelect(node.id)}
           >
             <div className="flex items-center justify-between w-full pr-1">
-              <span className="truncate">{node.name}</span>
+              <span
+                role="button"
+                tabIndex={0}
+                className="truncate cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); onSelect(node.id); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(node.id); } }}
+              >
+                {node.name}
+              </span>
               <span className="flex gap-1 ml-2">
                 <IconBtn title="Rename file" onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename file', node.name); if (name) onRename(node.id, name); }}>
                   <Pencil className="size-4" />
