@@ -368,6 +368,8 @@ export function CollaborationProvider({ children }) {
       window.dispatchEvent(event);
     };
 
+    // Files state request handled in useProjectFiles via socket.on('requestFilesState')
+
     // Initial state handler (from server to new user)
     const handleInitialState = ({ code, language, output }) => {
       console.log('Received initial state from host:', {

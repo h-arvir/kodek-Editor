@@ -1,30 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCollaboration } from '@/context/collabration';
 
 // Simple id generator
 const makeId = () => Math.random().toString(36).slice(2, 10);
 
-const STORAGE_KEY = 'kodek_files_v1';
+// const STORAGE_KEY = 'kodek_files_v1';
 
 // Node shape:
 // { id, name, type: 'file' | 'folder', children?: Node[], content?: string }
 
+// Local storage disabled for collaborative mode
 function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (e) {
-    console.warn('Failed to load project files from storage:', e);
-    return null;
-  }
+  return null;
 }
 
 function saveToStorage(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    console.warn('Failed to save project files to storage:', e);
-  }
+  // no-op
 }
 
 function findNode(root, id) {
@@ -86,9 +77,8 @@ function insertIntoTree(nodes, parentId, item) {
 }
 
 export function useProjectFiles() {
+  const { joinedRoom, roomId, socket, selfInfo } = useCollaboration();
   const [tree, setTree] = useState(() => {
-    const saved = loadFromStorage();
-    if (saved) return saved;
     // Default project with a src folder and a file
     return [
       {
@@ -109,15 +99,58 @@ export function useProjectFiles() {
 
   const [selectedFileId, setSelectedFileId] = useState(null);
 
+  const isApplyingRemoteRef = useRef(false);
+
   useEffect(() => {
     saveToStorage(tree);
-  }, [tree]);
+    if (isApplyingRemoteRef.current) {
+      // Do not broadcast when applying a remote update
+      isApplyingRemoteRef.current = false;
+      return;
+    }
+    if (joinedRoom && roomId && socket && selfInfo) {
+      socket.emit('filesTreeUpdate', { roomId, userId: selfInfo.id, tree });
+    }
+  }, [tree, joinedRoom, roomId, socket, selfInfo]);
 
   const selectedFile = useMemo(() => {
     if (!selectedFileId) return null;
     const node = findNode(tree, selectedFileId);
     return node && node.type === 'file' ? node : null;
   }, [tree, selectedFileId]);
+
+  // Listen for remote tree updates and initial state
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRemoteTreeUpdate = ({ userId, tree: incoming }) => {
+      if (!incoming || !Array.isArray(incoming)) return;
+      if (selfInfo && userId === selfInfo.id) return; // ignore own
+      isApplyingRemoteRef.current = true;
+      setTree(incoming);
+    };
+
+    const handleInitialFilesState = ({ tree: incoming }) => {
+      if (!incoming || !Array.isArray(incoming)) return;
+      isApplyingRemoteRef.current = true;
+      setTree(incoming);
+    };
+
+    const handleRequestFilesState = ({ requesterId }) => {
+      if (!joinedRoom || !roomId) return;
+      socket.emit('shareFilesState', { roomId, requesterId, tree });
+    };
+
+    socket.on('filesTreeUpdate', handleRemoteTreeUpdate);
+    socket.on('initialFilesState', handleInitialFilesState);
+    socket.on('requestFilesState', handleRequestFilesState);
+
+    return () => {
+      socket.off('filesTreeUpdate', handleRemoteTreeUpdate);
+      socket.off('initialFilesState', handleInitialFilesState);
+      socket.off('requestFilesState', handleRequestFilesState);
+    };
+  }, [socket, selfInfo, joinedRoom, roomId, tree]);
 
   const addFile = useCallback(({ name, parentId = null, content = '' }) => {
     const item = { id: makeId(), name, type: 'file', content };
@@ -148,6 +181,17 @@ export function useProjectFiles() {
   }, []);
 
   const selectFile = useCallback((id) => setSelectedFileId(id), []);
+
+  // When joining a room as host, share our files state when requested
+  useEffect(() => {
+    if (!socket) return;
+    const handleRequestFilesState = ({ requesterId }) => {
+      if (!joinedRoom || !roomId) return;
+      socket.emit('shareFilesState', { roomId, requesterId, tree });
+    };
+    socket.on('requestFilesState', handleRequestFilesState);
+    return () => socket.off('requestFilesState', handleRequestFilesState);
+  }, [socket, joinedRoom, roomId, tree]);
 
   return {
     tree,

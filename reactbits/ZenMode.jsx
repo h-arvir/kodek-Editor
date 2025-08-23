@@ -182,7 +182,7 @@ export default function ZenMode({ isActive }) { // Removed onClose prop
 
   // Render null if the component is not active
   if (!isActive) {
-      console.log('[ZenMode] Component inactive, rendering null.');
+      // console.log('[ZenMode] Component inactive, rendering null.');
       // Ensure audio stops if component becomes inactive suddenly
       if (audioRef.current && !audioRef.current.paused) {
           console.log('[ZenMode] Ensuring audio pause on inactive render.');
