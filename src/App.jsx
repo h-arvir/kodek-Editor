@@ -274,17 +274,19 @@ function App() {
 
         <main className={`main-content ${isFullScreen ? 'fullscreen-content' : ''}`}>
           <div className="editor-container" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-            {!isFullScreen && isFileTreeOpen && (
-              <div style={{ width: 280, minWidth: 220, maxWidth: 360 }}>
-                <FileTreePanel
-                  tree={tree}
-                  selectedId={selectedFileId}
-                  onSelect={selectFile}
-                  onAddFile={addFile}
-                  onAddFolder={addFolder}
-                  onRename={renameItem}
-                  onDelete={deleteItem}
-                />
+            {!isFullScreen && (
+              <div style={{ width: isFileTreeOpen ? 280 : 0, minWidth: isFileTreeOpen ? 220 : 0, maxWidth: isFileTreeOpen ? 360 : 0, overflow: 'hidden', transition: 'all 0.25s ease' }}>
+                {isFileTreeOpen && (
+                  <FileTreePanel
+                    tree={tree}
+                    selectedId={selectedFileId}
+                    onSelect={selectFile}
+                    onAddFile={addFile}
+                    onAddFolder={addFolder}
+                    onRename={renameItem}
+                    onDelete={deleteItem}
+                  />
+                )}
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'stretch', gap: 12 }}>

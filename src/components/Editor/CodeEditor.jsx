@@ -3,6 +3,7 @@ import Editor, { loader } from '@monaco-editor/react';
 import '../../styles/Editor/CodeEditor.css';
 
 import { memo, useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import {
   VscTerminalPowershell,
@@ -131,7 +132,6 @@ export const CodeEditor = memo(
       {
         icon: <VscTerminalPowershell size={18} />,
         label: 'Toggle Output',
-
         onClick: handleToggleOutput,
       },
       {
@@ -175,9 +175,12 @@ export const CodeEditor = memo(
         <div className="panel-header">
           {!isFullScreen && <span>Kodek Editor</span>}
           {isFullScreen && <span>Fullscreen Mode</span>}
-          <button
+          <motion.button
             className="button-secondary"
             onClick={toggleFullScreen}
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
             {isFullScreen ?
               <>
@@ -213,11 +216,14 @@ export const CodeEditor = memo(
                 <span>Fullscreen</span>
               </>
             }
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             className="button"
             onClick={runCode}
             disabled={isLoading}
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
             {isLoading ?
               <>
@@ -254,26 +260,64 @@ export const CodeEditor = memo(
                 <span>Run Code</span>
               </>
             }
-          </button>
+          </motion.button>
         </div>
         <div className="editor-layout">
           <div className="dock-container">
-            <Dock
-              items={items}
-              panelHeight={68}
-              baseItemSize={60}
-              magnification={62}
-            />
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Dock
+                items={items}
+                panelHeight={68}
+                baseItemSize={60}
+                magnification={62}
+              />
+            </motion.div>
             <div className="panels-stack">
-              <ChatDock isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
-              <AudioChat 
-                isActive={isAudioChatOpen} 
-                onToggle={() => setIsAudioChatOpen(false)} 
-              />
-              <VideoChat 
-                isActive={isVideoChatOpen} 
-                onToggle={() => setIsVideoChatOpen(false)} 
-              />
+              <AnimatePresence>
+                {isChatOpen && (
+                  <motion.div
+                    key="chat"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChatDock isOpen={true} setIsOpen={setIsChatOpen} />
+                  </motion.div>
+                )}
+                {isAudioChatOpen && (
+                  <motion.div
+                    key="audio"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <AudioChat 
+                      isActive={true} 
+                      onToggle={() => setIsAudioChatOpen(false)} 
+                    />
+                  </motion.div>
+                )}
+                {isVideoChatOpen && (
+                  <motion.div
+                    key="video"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <VideoChat 
+                      isActive={true} 
+                      onToggle={() => setIsVideoChatOpen(false)} 
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
           <div className="editor-wrapper">
