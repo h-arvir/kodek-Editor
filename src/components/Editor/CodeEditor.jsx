@@ -3,6 +3,8 @@ import Editor, { loader } from '@monaco-editor/react';
 import '../../styles/Editor/CodeEditor.css';
 
 import { memo, useState, useEffect } from 'react';
+import { FolderTree } from "lucide-react";
+import { FaFolderTree } from "react-icons/fa6";
 import { motion, AnimatePresence } from 'framer-motion';
 
 import {
@@ -164,7 +166,7 @@ export const CodeEditor = memo(
         onClick: handleVideoChatClick,
       },
       {
-        icon: <VscFolder size={18} />,
+        icon: <FaFolderTree size={18} />,
         label: isFileTreeOpen ? 'Hide File Tree' : 'Show File Tree',
         onClick: () => {
           if (typeof toggleFileTree === 'function') toggleFileTree();
@@ -343,7 +345,7 @@ export const CodeEditor = memo(
                     <div className="download-menu" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {downloadStep === 'root' && (
                         <>
-                          <button className="button" onClick={() => setDownloadStep('import')}>
+                          <button className="button-secondary" onClick={() => setDownloadStep('import')}>
                             Import
                           </button>
                           <button className="button-secondary" onClick={() => setDownloadStep('export')}>
@@ -353,7 +355,7 @@ export const CodeEditor = memo(
                       )}
                       {downloadStep === 'export' && (
                         <>
-                          <button className="button" onClick={() => {
+                          <button className="button-secondary" onClick={() => {
                             try {
                               if (selectedFile && selectedFile.name) {
                                 const blob = new Blob([code ?? ''], { type: 'text/plain;charset=utf-8' });
@@ -410,7 +412,7 @@ export const CodeEditor = memo(
                         <>
                           {/* Hidden input for single file import */}
                           <input id="kodek-import-file" type="file" style={{ display: 'none' }} />
-                          <button className="button" onClick={() => {
+                          <button className="button-secondary" onClick={() => {
                             const input = document.getElementById('kodek-import-file');
                             if (!input) return;
                             input.onchange = async (e) => {
