@@ -252,25 +252,41 @@ const File = forwardRef(
     const { direction, selectedId, selectItem } = useTree();
     const isSelected = isSelect ?? selectedId === value;
     return (
-      <button
+      <div
         ref={ref}
-        type="button"
-        disabled={!isSelectable}
         className={cn(
-          "flex w-fit items-center gap-1 rounded-md pr-1 text-sm duration-200 ease-in-out rtl:pl-1 rtl:pr-0",
-          {
-            "bg-muted": isSelected && isSelectable,
-          },
-          isSelectable ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+          "flex w-fit items-center gap-1 pr-1 text-sm rtl:pl-1 rtl:pr-0",
           direction === "rtl" ? "rtl" : "ltr",
           className
         )}
-        onClick={() => selectItem(value)}
-        {...props}
       >
         {fileIcon ?? <FileIcon className="size-4" />}
-        {children}
-      </button>
+        <span
+          role="button"
+          tabIndex={isSelectable ? 0 : -1}
+          aria-disabled={!isSelectable}
+          className={cn(
+            "truncate",
+            isSelectable ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+            isSelected && isSelectable ? "bg-muted rounded px-1" : null
+          )}
+          onClick={() => {
+            if (!isSelectable) return;
+            selectItem(value);
+            if (typeof props?.onClick === "function") props.onClick();
+          }}
+          onKeyDown={(e) => {
+            if (!isSelectable) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              selectItem(value);
+              if (typeof props?.onClick === "function") props.onClick();
+            }
+          }}
+        >
+          {children}
+        </span>
+      </div>
     );
   }
 );
