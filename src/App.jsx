@@ -61,6 +61,7 @@ function App() {
   // Project files state (local, per user)
   const {
     tree,
+    setTree,
     selectedFile,
     selectedFileId,
     addFile,
@@ -305,6 +306,8 @@ function App() {
                   toggleFileTree={toggleFileTree}
                   selectedFile={selectedFile}
                   tree={tree}
+                  addFile={addFile}
+                  setTree={setTree}
                   {...mouseMoveProps}
                 />
                 <OutputPanel
