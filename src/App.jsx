@@ -303,6 +303,8 @@ function App() {
                   isLoading={isLoading}
                   isFileTreeOpen={isFileTreeOpen}
                   toggleFileTree={toggleFileTree}
+                  selectedFile={selectedFile}
+                  tree={tree}
                   {...mouseMoveProps}
                 />
                 <OutputPanel

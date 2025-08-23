@@ -10,6 +10,7 @@ import {
   VscFeedback,
   VscComment,
   VscFolder,
+  VscCloudDownload,
   } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 import { BsMic, BsCameraVideo } from 'react-icons/bs';
@@ -59,11 +60,14 @@ export const CodeEditor = memo(
     isLoading,
     isFileTreeOpen,
     toggleFileTree,
+    selectedFile,
+    tree,
     ...props
   }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isAudioChatOpen, setIsAudioChatOpen] = useState(false);
     const [isVideoChatOpen, setIsVideoChatOpen] = useState(false);
+    const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
     // file tree visibility is controlled by parent via props
     const { unreadCount } = useCollaboration();
     const { theme, toggleTheme, isDark } = useTheme();
@@ -162,6 +166,11 @@ export const CodeEditor = memo(
         onClick: () => {
           if (typeof toggleFileTree === 'function') toggleFileTree();
         },
+      },
+      {
+        icon: <VscCloudDownload size={18} />,
+        label: 'Download',
+        onClick: () => setIsDownloadMenuOpen((v) => !v),
       },
       {
         icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
@@ -272,8 +281,8 @@ export const CodeEditor = memo(
               <Dock
                 items={items}
                 panelHeight={68}
-                baseItemSize={60}
-                magnification={62}
+                baseItemSize={50}
+                magnification={50}
               />
             </motion.div>
             <div className="panels-stack">
@@ -315,6 +324,68 @@ export const CodeEditor = memo(
                       isActive={true} 
                       onToggle={() => setIsVideoChatOpen(false)} 
                     />
+                  </motion.div>
+                )}
+                {isDownloadMenuOpen && (
+                  <motion.div
+                    key="download"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="download-menu" style={{ display: 'flex', gap: 8 }}>
+                      <button className="button" onClick={() => {
+                        try {
+                          if (selectedFile && selectedFile.name) {
+                            const blob = new Blob([code ?? ''], { type: 'text/plain;charset=utf-8' });
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = selectedFile.name;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(a.href);
+                          }
+                        } finally {
+                          setIsDownloadMenuOpen(false);
+                        }
+                      }}>
+                        Download current file
+                      </button>
+                      <button className="button-secondary" onClick={() => {
+                        import('jszip').then(({ default: JSZip }) => {
+                          const zip = new JSZip();
+                          const addNodes = (nodes, basePath = '') => {
+                            if (!Array.isArray(nodes)) return;
+                            for (const node of nodes) {
+                              const path = basePath ? `${basePath}/${node.name}` : node.name;
+                              if (node.type === 'folder') {
+                                zip.folder(path);
+                                if (node.children) addNodes(node.children, path);
+                              } else if (node.type === 'file') {
+                                const content = node.id === selectedFile?.id ? (code ?? '') : (node.content ?? '');
+                                zip.file(path, content);
+                              }
+                            }
+                          };
+                          addNodes(tree);
+                          zip.generateAsync({ type: 'blob' }).then((blob) => {
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = 'project.zip';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(a.href);
+                          });
+                        }).catch((e) => {
+                          console.error('JSZip not available. Install with: npm i jszip', e);
+                        }).finally(() => setIsDownloadMenuOpen(false));
+                      }}>
+                        Download entire project (zip)
+                      </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
