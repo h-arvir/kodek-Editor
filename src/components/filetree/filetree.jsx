@@ -194,7 +194,7 @@ const Folder = forwardRef(
         <AccordionPrimitive.Trigger asChild>
           <div
             className={cn(
-              `flex items-center gap-1 rounded-md text-sm`,
+              `flex items-center gap-1 rounded-md text-sm w-full pr-1`,
               className,
               {
                 "bg-muted rounded-md": isSelect && isSelectable,

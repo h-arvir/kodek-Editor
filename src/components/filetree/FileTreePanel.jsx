@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Plus, FolderPlus, Pencil, Trash2 } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { Plus, FolderPlus, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tree, Folder, File, CollapseButton } from './filetree';
@@ -20,25 +20,41 @@ const IconBtn = ({ onClick, title, children }) => (
 
 // Helper to render the tree recursively
 function TreeNodes({ nodes, selectedId, onSelect, onAddFile, onAddFolder, onRename, onDelete }) {
+  // Track which row's actions are visible; by id
+  const [openActions, setOpenActions] = useState(new Set());
+  const toggleActions = (id) => {
+    setOpenActions(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
   return (
     <>
       {nodes.map((node) =>
         node.type === 'folder' ? (
           <Folder key={node.id} value={node.id} element={
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center justify-between w-full pr-1">
               <span className="truncate">{node.name}</span>
-              <span className="flex gap-1 ml-2">
-                <IconBtn title="New file" onClick={(e) => { e.stopPropagation(); const name = window.prompt('New file name'); if (name) onAddFile({ parentId: node.id, name, content: '' }); }}>
-                  <Plus className="size-4" />
-                </IconBtn>
-                <IconBtn title="New folder" onClick={(e) => { e.stopPropagation(); const name = window.prompt('New folder name'); if (name) onAddFolder({ parentId: node.id, name }); }}>
-                  <FolderPlus className="size-4" />
-                </IconBtn>
-                <IconBtn title="Rename folder" onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename folder', node.name); if (name) onRename(node.id, name); }}>
-                  <Pencil className="size-4" />
-                </IconBtn>
-                <IconBtn title="Delete folder" onClick={(e) => { e.stopPropagation(); if (window.confirm(`Delete folder \"${node.name}\"?`)) onDelete(node.id); }}>
-                  <Trash2 className="size-4" />
+              <span className="flex items-center gap-1 ml-2">
+                {openActions.has(node.id) && (
+                  <>
+                    <IconBtn title="New file" onClick={(e) => { e.stopPropagation(); const name = window.prompt('New file name'); if (name) onAddFile({ parentId: node.id, name, content: '' }); }}>
+                      <Plus className="size-4" />
+                    </IconBtn>
+                    <IconBtn title="New folder" onClick={(e) => { e.stopPropagation(); const name = window.prompt('New folder name'); if (name) onAddFolder({ parentId: node.id, name }); }}>
+                      <FolderPlus className="size-4" />
+                    </IconBtn>
+                    <IconBtn title="Rename folder" onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename folder', node.name); if (name) onRename(node.id, name); }}>
+                      <Pencil className="size-4" />
+                    </IconBtn>
+                    <IconBtn title="Delete folder" onClick={(e) => { e.stopPropagation(); if (window.confirm(`Delete folder \"${node.name}\"?`)) onDelete(node.id); }}>
+                      <Trash2 className="size-4" />
+                    </IconBtn>
+                  </>
+                )}
+                <IconBtn title={openActions.has(node.id) ? 'Hide actions' : 'Show actions'} onClick={(e) => { e.stopPropagation(); toggleActions(node.id); }}>
+                  <MoreHorizontal className="size-4" />
                 </IconBtn>
               </span>
             </div>
@@ -71,12 +87,19 @@ function TreeNodes({ nodes, selectedId, onSelect, onAddFile, onAddFolder, onRena
               >
                 {node.name}
               </span>
-              <span className="flex gap-1 ml-2">
-                <IconBtn title="Rename file" onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename file', node.name); if (name) onRename(node.id, name); }}>
-                  <Pencil className="size-4" />
-                </IconBtn>
-                <IconBtn title="Delete file" onClick={(e) => { e.stopPropagation(); if (window.confirm(`Delete file \"${node.name}\"?`)) onDelete(node.id); }}>
-                  <Trash2 className="size-4" />
+              <span className="flex items-center gap-1 ml-2">
+                {openActions.has(node.id) && (
+                  <>
+                    <IconBtn title="Rename file" onClick={(e) => { e.stopPropagation(); const name = window.prompt('Rename file', node.name); if (name) onRename(node.id, name); }}>
+                      <Pencil className="size-4" />
+                    </IconBtn>
+                    <IconBtn title="Delete file" onClick={(e) => { e.stopPropagation(); if (window.confirm(`Delete file \"${node.name}\"?`)) onDelete(node.id); }}>
+                      <Trash2 className="size-4" />
+                    </IconBtn>
+                  </>
+                )}
+                <IconBtn title={openActions.has(node.id) ? 'Hide actions' : 'Show actions'} onClick={(e) => { e.stopPropagation(); toggleActions(node.id); }}>
+                  <MoreHorizontal className="size-4" />
                 </IconBtn>
               </span>
             </div>
