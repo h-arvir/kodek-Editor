@@ -8,6 +8,7 @@ import {
   VscTerminalPowershell,
   VscFeedback,
   VscComment,
+  VscFolder,
   } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 import { BsMic, BsCameraVideo } from 'react-icons/bs';
@@ -55,11 +56,14 @@ export const CodeEditor = memo(
     toggleOutput,
     runCode,
     isLoading,
+    isFileTreeOpen,
+    toggleFileTree,
     ...props
   }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isAudioChatOpen, setIsAudioChatOpen] = useState(false);
     const [isVideoChatOpen, setIsVideoChatOpen] = useState(false);
+    // file tree visibility is controlled by parent via props
     const { unreadCount } = useCollaboration();
     const { theme, toggleTheme, isDark } = useTheme();
     
@@ -127,6 +131,7 @@ export const CodeEditor = memo(
       {
         icon: <VscTerminalPowershell size={18} />,
         label: 'Toggle Output',
+
         onClick: handleToggleOutput,
       },
       {
@@ -150,6 +155,13 @@ export const CodeEditor = memo(
         icon: <BsCameraVideo size={18} />,
         label: 'Video Chat',
         onClick: handleVideoChatClick,
+      },
+      {
+        icon: <VscFolder size={18} />,
+        label: isFileTreeOpen ? 'Hide File Tree' : 'Show File Tree',
+        onClick: () => {
+          if (typeof toggleFileTree === 'function') toggleFileTree();
+        },
       },
       {
         icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,

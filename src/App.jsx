@@ -24,6 +24,7 @@ import { LANGUAGE_OPTIONS } from './utils/constants';
  */
 function App() {
   const [language, setLanguage] = useState('javascript');
+  const [isFileTreeOpen, setIsFileTreeOpen] = useState(false);
 
   // Initialize collaboration features
   const {
@@ -73,6 +74,10 @@ function App() {
   const currentCodeRef = useRef(code); // Ref to track current code for comparison
 
   const mouseMoveProps = useMouseProps();
+
+  const toggleFileTree = useCallback(() => {
+    setIsFileTreeOpen(prev => !prev);
+  }, []);
 
   // Initialize code execution
   const {
@@ -269,7 +274,7 @@ function App() {
 
         <main className={`main-content ${isFullScreen ? 'fullscreen-content' : ''}`}>
           <div className="editor-container" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-            {!isFullScreen && (
+            {!isFullScreen && isFileTreeOpen && (
               <div style={{ width: 280, minWidth: 220, maxWidth: 360 }}>
                 <FileTreePanel
                   tree={tree}
@@ -282,7 +287,7 @@ function App() {
                 />
               </div>
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'stretch', gap: 12 }}>
               <RemoteCursors>
                 <CodeEditor
                   language={language}
@@ -294,6 +299,8 @@ function App() {
                   toggleOutput={toggleOutput}
                   runCode={executeCode}
                   isLoading={isLoading}
+                  isFileTreeOpen={isFileTreeOpen}
+                  toggleFileTree={toggleFileTree}
                   {...mouseMoveProps}
                 />
                 <OutputPanel
