@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Plus, FolderPlus, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { Plus, FolderPlus, Pencil, Trash2, MoreHorizontal, Eye } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tree, Folder, File, CollapseButton } from './filetree';
@@ -131,19 +131,34 @@ export function FileTreePanel({
 
   return (
     <div className="h-full flex flex-col border-r bg-background">
-      <div className="flex items-center justify-between p-2 border-b">
-        <span className="text-sm font-medium">Files</span>
-        <div className="flex gap-1">
-          <IconBtn title="New file" onClick={addRootFile}>
-            <Plus className="size-4" />
-          </IconBtn>
-          <IconBtn title="New folder" onClick={addRootFolder}>
-            <FolderPlus className="size-4" />
-          </IconBtn>
-        </div>
-      </div>
+
       <ScrollArea className="flex-1 relative">
         <Tree elements={tree} className="p-1">
+          {/* Sticky header inside Tree to stay within TreeContext */}
+          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 mb-1 border-b px-1 py-1 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-small">FileTree</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {/* Eye toggle icon, using lucide-react for consistency */}
+              <CollapseButton
+                elements={tree}
+                className="!p-0 text-muted-foreground hover:text-foreground outline-none focus:outline-none focus:ring-0"
+                aria-label="Toggle"
+                title="Toggle"
+              >
+                <Eye className="size-4" />
+              </CollapseButton>
+              <IconBtn title="New file" onClick={addRootFile}>
+                <Plus className="size-4" />
+              </IconBtn>
+              <IconBtn title="New folder" onClick={addRootFolder}>
+                <FolderPlus className="size-4" />
+              </IconBtn>
+              
+            </div>
+          </div>
+
           <TreeNodes
             nodes={tree}
             selectedId={selectedId}
@@ -153,9 +168,6 @@ export function FileTreePanel({
             onRename={onRename}
             onDelete={onDelete}
           />
-          <CollapseButton elements={tree}>
-            Toggle
-          </CollapseButton>
         </Tree>
       </ScrollArea>
     </div>

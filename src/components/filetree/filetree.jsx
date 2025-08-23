@@ -254,14 +254,16 @@ const File = forwardRef(
     return (
       <div
         ref={ref}
+        aria-selected={isSelected}
         className={cn(
-          "flex w-full items-center gap-1 pr-1 text-sm rtl:pl-1 rtl:pr-0",
+          "flex w-full items-center gap-1 pr-1 text-sm rtl:pl-1 rtl:pr-0 rounded-md",
           direction === "rtl" ? "rtl" : "ltr",
+          { "bg-muted": isSelected, "hover:bg-muted/70": !isSelected },
           className
         )}
       >
         {fileIcon ?? <FileIcon className="size-4" />}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 px-1 py-0.5">
           {children}
         </div>
       </div>
@@ -301,7 +303,7 @@ const CollapseButton = forwardRef(
     return (
       <Button
         variant={"ghost"}
-        className="absolute bottom-1 right-2 h-8 w-fit p-1"
+        className={cn("h-auto w-auto p-1 inline-flex items-center", className)}
         onClick={
           expandedItems && expandedItems.length > 0
             ? closeAll

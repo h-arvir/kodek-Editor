@@ -78,26 +78,38 @@ function insertIntoTree(nodes, parentId, item) {
 
 export function useProjectFiles() {
   const { joinedRoom, roomId, socket, selfInfo } = useCollaboration();
+
+  // Stable id for initial main.js so we can select it by default
+  const mainFileIdRef = useRef(makeId());
+
   const [tree, setTree] = useState(() => {
-    // Default project with a src folder and a file
+    // Default project with a single main.js at the root
     return [
       {
-        id: makeId(),
-        name: 'src',
-        type: 'folder',
-        children: [
-          {
-            id: makeId(),
-            name: 'main.js',
-            type: 'file',
-            content: "// Your first file!\nconsole.log('Hello from Kodek Project Files');",
-          },
-        ],
+        id: mainFileIdRef.current,
+        name: 'main.js',
+        type: 'file',
+        content: "// Your first file!\nconsole.log('Hello from Kodek Project Files');",
       },
     ];
   });
 
-  const [selectedFileId, setSelectedFileId] = useState(null);
+  // Open main.js by default
+  const [selectedFileId, setSelectedFileId] = useState(mainFileIdRef.current);
+
+  // Ensure a file is selected when tree is available (handles remote updates)
+  useEffect(() => {
+    if (selectedFileId) return;
+    const stack = Array.isArray(tree) ? [...tree] : [];
+    while (stack.length) {
+      const node = stack.shift();
+      if (node.type === 'file') {
+        setSelectedFileId(node.id);
+        break;
+      }
+      if (node.children) stack.push(...node.children);
+    }
+  }, [tree, selectedFileId]);
 
   const isApplyingRemoteRef = useRef(false);
 
