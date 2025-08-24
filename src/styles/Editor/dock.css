@@ -1,24 +1,30 @@
 .dock-outer {
-  height: 100%;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: fit-content;
+  height: fit-content;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   padding: 0.5rem;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .dock-panel {
+  width: fit-content;
   height: fit-content;
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 1.2rem;
   border-radius: 1rem;
   background-color: var(--dock-bg);
   border: 1px solid var(--dock-border);
   padding: 0.5rem;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .dock-item {
@@ -66,19 +72,19 @@
 
 .dock-label {
   position: absolute;
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 0.5rem;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
   width: fit-content;
-  white-space: pre;
+  white-space: nowrap;
   border-radius: 0.375rem;
   border: 1px solid var(--dock-label-border);
   background-color: var(--dock-label-bg);
   padding: 0.125rem 0.5rem;
   font-size: 0.75rem;
   color: var(--dock-label-text);
-  z-index: 110;
+  z-index: 1100;
   pointer-events: none;
 }
 

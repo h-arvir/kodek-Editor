@@ -95,13 +95,12 @@ function DockLabel({ children, className = '', ...rest }) {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, y: 0 }}
-          animate={{ opacity: 1, y: -10 }}
-          exit={{ opacity: 0, y: 0 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
           transition={{ duration: 0.2 }}
           className={`dock-label ${className}`}
           role="tooltip"
-          style={{ x: '-50%' }}
         >
           {children}
         </motion.div>
@@ -129,8 +128,8 @@ export default function Dock({
   const [zenModeActive, setZenModeActive] = useState(false);
 
   const maxHeight = useMemo(
-    () => Math.max(dockHeight, magnification + magnification / 2 + 4),
-    [magnification, dockHeight],
+    () => Math.max(panelHeight, magnification + 20),
+    [magnification, panelHeight],
   );
   const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight]);
   const height = useSpring(heightRow, spring);

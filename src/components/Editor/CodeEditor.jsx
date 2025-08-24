@@ -280,99 +280,86 @@ export const CodeEditor = memo(
           </motion.button>
         </div>
         <div className="editor-layout">
-          <div className="dock-container">
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Dock
-                items={items}
-                panelHeight={68}
-                baseItemSize={50}
-                magnification={50}
-              />
-            </motion.div>
-            <div className="panels-stack">
-              <AnimatePresence>
-                {isChatOpen && (
-                  <motion.div
-                    key="chat"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 12 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <ChatDock isOpen={true} setIsOpen={setIsChatOpen} />
-                  </motion.div>
-                )}
-                {isAudioChatOpen && (
-                  <motion.div
-                    key="audio"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 12 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <AudioChat 
-                      isActive={true} 
-                      onToggle={() => setIsAudioChatOpen(false)} 
-                    />
-                  </motion.div>
-                )}
-                {isVideoChatOpen && (
-                  <motion.div
-                    key="video"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 12 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <VideoChat 
-                      isActive={true} 
-                      onToggle={() => setIsVideoChatOpen(false)} 
-                    />
-                  </motion.div>
-                )}
-                {isDownloadMenuOpen && (
-                  <motion.div
-                    key="import-export"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 12 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="download-menu" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {downloadStep === 'root' && (
-                        <>
-                          <button className="button-secondary" onClick={() => setDownloadStep('import')}>
-                            Import
-                          </button>
-                          <button className="button-secondary" onClick={() => setDownloadStep('export')}>
-                            Export
-                          </button>
-                        </>
-                      )}
-                      {downloadStep === 'export' && (
-                        <>
-                          <button className="button-secondary" onClick={() => {
-                            try {
-                              if (selectedFile && selectedFile.name) {
-                                const blob = new Blob([code ?? ''], { type: 'text/plain;charset=utf-8' });
-                                const a = document.createElement('a');
-                                a.href = URL.createObjectURL(blob);
-                                a.download = selectedFile.name;
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                URL.revokeObjectURL(a.href);
-                              }
-                            } finally {
-                              setIsDownloadMenuOpen(false);
-                              setDownloadStep('root');
+          <div className="panels-stack">
+            <AnimatePresence>
+              {isChatOpen && (
+                <motion.div
+                  key="chat"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChatDock isOpen={true} setIsOpen={setIsChatOpen} />
+                </motion.div>
+              )}
+              {isAudioChatOpen && (
+                <motion.div
+                  key="audio"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <AudioChat 
+                    isActive={true} 
+                    onToggle={() => setIsAudioChatOpen(false)} 
+                  />
+                </motion.div>
+              )}
+              {isVideoChatOpen && (
+                <motion.div
+                  key="video"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <VideoChat 
+                    isActive={true} 
+                    onToggle={() => setIsVideoChatOpen(false)} 
+                  />
+                </motion.div>
+              )}
+              {isDownloadMenuOpen && (
+                <motion.div
+                  key="import-export"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="download-menu" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {downloadStep === 'root' && (
+                      <>
+                        <button className="button-secondary" onClick={() => setDownloadStep('import')}>
+                          Import
+                        </button>
+                        <button className="button-secondary" onClick={() => setDownloadStep('export')}>
+                          Export
+                        </button>
+                      </>
+                    )}
+                    {downloadStep === 'export' && (
+                      <>
+                        <button className="button-secondary" onClick={() => {
+                          try {
+                            if (selectedFile && selectedFile.name) {
+                              const blob = new Blob([code ?? ''], { type: 'text/plain;charset=utf-8' });
+                              const a = document.createElement('a');
+                              a.href = URL.createObjectURL(blob);
+                              a.download = selectedFile.name;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(a.href);
                             }
-                          }}>
-                            Export current file
+                          } finally {
+                            setIsDownloadMenuOpen(false);
+                            setDownloadStep('root');
+                          }
+                        }}>
+                          Export current file
                           </button>
                           <button className="button-secondary" onClick={() => {
                             import('jszip').then(({ default: JSZip }) => {
@@ -544,6 +531,23 @@ export const CodeEditor = memo(
             />
           </div>
         </div>
+        
+        {/* Fixed dock at bottom center */}
+        {!isFullScreen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Dock
+              items={items}
+              panelHeight={68}
+              baseItemSize={50}
+              magnification={70}
+              distance={150}
+            />
+          </motion.div>
+        )}
       </div>
     );
   },

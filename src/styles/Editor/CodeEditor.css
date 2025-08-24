@@ -41,11 +41,7 @@
   height: 100vh !important; /* Ensure it takes full viewport height */
 }
 
-/* Hide dock container when in fullscreen mode */
-.panel.fullscreen .dock-container,
-body.editor-fullscreen .dock-container {
-  display: none !important;
-}
+/* Dock is now handled by conditional rendering in the component */
 
 .panel-header {
   padding: 0.75rem 1rem;
@@ -113,12 +109,6 @@ body.editor-fullscreen .dock-container {
   flex-direction: row;
   height: calc(100% - 60px); /* Subtract header height */
   width: 100%;
-}
-
-.dock-container {
-  height: 100%;
-  padding: 0.5rem;
-  border-right: 1px solid #222;
 }
 
 .editor-wrapper {
