@@ -17,7 +17,8 @@ import {
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 import { BsMic, BsCameraVideo } from 'react-icons/bs';
 
-import Dock from '../../../reactbits/dock';
+
+import NavDock from '../../../reactbits/NavDock';
 import { ChatDock } from '../Chat/ChatDock';
 import { AudioChat } from '../Audio/AudioChat';
 import { VideoChat } from '../Audio/VideoChat';
@@ -286,11 +287,11 @@ export const CodeEditor = memo(
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <Dock
+              <NavDock
                 items={items}
-                panelHeight={68}
-                baseItemSize={50}
-                magnification={50}
+                panelHeight={78}
+                baseItemSize={60}
+                magnification={75}
               />
             </motion.div>
             <div className="panels-stack">
