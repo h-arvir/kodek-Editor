@@ -17,7 +17,8 @@ import {
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 import { BsMic, BsCameraVideo } from 'react-icons/bs';
 
-import Dock from '../../../reactbits/dock';
+import NavDock from '../../../reactbits/navdock';
+import '../../styles/navdock/navdock.css';
 import { ChatDock } from '../Chat/ChatDock';
 import { AudioChat } from '../Audio/AudioChat';
 import { VideoChat } from '../Audio/VideoChat';
@@ -285,8 +286,9 @@ export const CodeEditor = memo(
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.2 }}
+              style={{ position: 'relative', height: '100%', overflow: 'visible' }}
             >
-              <Dock
+              <NavDock
                 items={items}
                 panelHeight={68}
                 baseItemSize={50}

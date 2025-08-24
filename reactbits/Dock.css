@@ -1,0 +1,2 @@
+/* Bridge stylesheet for NavDock; keeps original styles untouched */
+@import "../src/styles/navdock/navdock.css";
