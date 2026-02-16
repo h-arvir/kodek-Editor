@@ -118,7 +118,7 @@ body.editor-fullscreen .dock-container {
 .dock-container {
   height: 100%;
   padding: 0.5rem;
-  border-right: 1px solid #222;
+  border-right: 1px solid var(--border, #222);
 }
 
 .editor-wrapper {
