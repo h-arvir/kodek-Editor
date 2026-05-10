@@ -3,16 +3,22 @@ import Editor, { loader } from '@monaco-editor/react';
 import '../../styles/Editor/CodeEditor.css';
 
 import { memo, useState, useEffect } from 'react';
+import { FolderTree } from "lucide-react";
+import { FaFolderTree } from "react-icons/fa6";
+import { motion, AnimatePresence } from 'framer-motion';
 
 import {
   VscTerminalPowershell,
   VscFeedback,
   VscComment,
+  VscFolder,
+  VscCloudDownload,
   } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 import { BsMic, BsCameraVideo } from 'react-icons/bs';
 
-import Dock from '../../../reactbits/dock';
+
+import NavDock from '../../../reactbits/NavDock';
 import { ChatDock } from '../Chat/ChatDock';
 import { AudioChat } from '../Audio/AudioChat';
 import { VideoChat } from '../Audio/VideoChat';
@@ -55,11 +61,20 @@ export const CodeEditor = memo(
     toggleOutput,
     runCode,
     isLoading,
+    isFileTreeOpen,
+    toggleFileTree,
+    selectedFile,
+    tree,
+    addFile,
+    setTree,
     ...props
   }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isAudioChatOpen, setIsAudioChatOpen] = useState(false);
     const [isVideoChatOpen, setIsVideoChatOpen] = useState(false);
+    const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
+    const [downloadStep, setDownloadStep] = useState('root'); // 'root' | 'import' | 'export'
+    // file tree visibility is controlled by parent via props
     const { unreadCount } = useCollaboration();
     const { theme, toggleTheme, isDark } = useTheme();
     
@@ -152,6 +167,21 @@ export const CodeEditor = memo(
         onClick: handleVideoChatClick,
       },
       {
+        icon: <FaFolderTree size={18} />,
+        label: isFileTreeOpen ? 'Hide File Tree' : 'Show File Tree',
+        onClick: () => {
+          if (typeof toggleFileTree === 'function') toggleFileTree();
+        },
+      },
+      {
+        icon: <VscCloudDownload size={18} />,
+        label: 'Import/Export',
+        onClick: () => {
+          setDownloadStep('root');
+          setIsDownloadMenuOpen((v) => !v)
+        },
+      },
+      {
         icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
         label: isDark ? 'Light Mode' : 'Dark Mode',
         onClick: toggleTheme,
@@ -163,9 +193,12 @@ export const CodeEditor = memo(
         <div className="panel-header">
           {!isFullScreen && <span>Kodek Editor</span>}
           {isFullScreen && <span>Fullscreen Mode</span>}
-          <button
+          <motion.button
             className="button-secondary"
             onClick={toggleFullScreen}
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
             {isFullScreen ?
               <>
@@ -201,11 +234,14 @@ export const CodeEditor = memo(
                 <span>Fullscreen</span>
               </>
             }
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             className="button"
             onClick={runCode}
             disabled={isLoading}
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
             {isLoading ?
               <>
@@ -242,26 +278,230 @@ export const CodeEditor = memo(
                 <span>Run Code</span>
               </>
             }
-          </button>
+          </motion.button>
         </div>
         <div className="editor-layout">
           <div className="dock-container">
-            <Dock
-              items={items}
-              panelHeight={68}
-              baseItemSize={60}
-              magnification={62}
-            />
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <NavDock
+                items={items}
+                panelHeight={78}
+                baseItemSize={60}
+                magnification={75}
+              />
+            </motion.div>
             <div className="panels-stack">
-              <ChatDock isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
-              <AudioChat 
-                isActive={isAudioChatOpen} 
-                onToggle={() => setIsAudioChatOpen(false)} 
-              />
-              <VideoChat 
-                isActive={isVideoChatOpen} 
-                onToggle={() => setIsVideoChatOpen(false)} 
-              />
+              <AnimatePresence>
+                {isChatOpen && (
+                  <motion.div
+                    key="chat"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChatDock isOpen={true} setIsOpen={setIsChatOpen} />
+                  </motion.div>
+                )}
+                {isAudioChatOpen && (
+                  <motion.div
+                    key="audio"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <AudioChat 
+                      isActive={true} 
+                      onToggle={() => setIsAudioChatOpen(false)} 
+                    />
+                  </motion.div>
+                )}
+                {isVideoChatOpen && (
+                  <motion.div
+                    key="video"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <VideoChat 
+                      isActive={true} 
+                      onToggle={() => setIsVideoChatOpen(false)} 
+                    />
+                  </motion.div>
+                )}
+                {isDownloadMenuOpen && (
+                  <motion.div
+                    key="import-export"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 12 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="download-menu" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {downloadStep === 'root' && (
+                        <>
+                          <button className="button-secondary" onClick={() => setDownloadStep('import')}>
+                            Import
+                          </button>
+                          <button className="button-secondary" onClick={() => setDownloadStep('export')}>
+                            Export
+                          </button>
+                        </>
+                      )}
+                      {downloadStep === 'export' && (
+                        <>
+                          <button className="button-secondary" onClick={() => {
+                            try {
+                              if (selectedFile && selectedFile.name) {
+                                const blob = new Blob([code ?? ''], { type: 'text/plain;charset=utf-8' });
+                                const a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = selectedFile.name;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(a.href);
+                              }
+                            } finally {
+                              setIsDownloadMenuOpen(false);
+                              setDownloadStep('root');
+                            }
+                          }}>
+                            Export current file
+                          </button>
+                          <button className="button-secondary" onClick={() => {
+                            import('jszip').then(({ default: JSZip }) => {
+                              const zip = new JSZip();
+                              const addNodes = (nodes, basePath = '') => {
+                                if (!Array.isArray(nodes)) return;
+                                for (const node of nodes) {
+                                  const path = basePath ? `${basePath}/${node.name}` : node.name;
+                                  if (node.type === 'folder') {
+                                    zip.folder(path);
+                                    if (node.children) addNodes(node.children, path);
+                                  } else if (node.type === 'file') {
+                                    const content = node.id === selectedFile?.id ? (code ?? '') : (node.content ?? '');
+                                    zip.file(path, content);
+                                  }
+                                }
+                              };
+                              addNodes(tree);
+                              zip.generateAsync({ type: 'blob' }).then((blob) => {
+                                const a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = 'project.zip';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(a.href);
+                              });
+                            }).catch((e) => {
+                              console.error('JSZip not available. Install with: npm i jszip', e);
+                            }).finally(() => { setIsDownloadMenuOpen(false); setDownloadStep('root'); });
+                          }}>
+                            Export entire project (zip)
+                          </button>
+                        </>
+                      )}
+                      {downloadStep === 'import' && (
+                        <>
+                          {/* Hidden input for single file import */}
+                          <input id="kodek-import-file" type="file" style={{ display: 'none' }} />
+                          <button className="button-secondary" onClick={() => {
+                            const input = document.getElementById('kodek-import-file');
+                            if (!input) return;
+                            input.onchange = async (e) => {
+                              try {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const text = await file.text();
+                                const added = addFile({ name: file.name, content: text });
+                                // Select newly added file via addFile’s side-effect
+                              } catch (err) {
+                                console.error('Failed to import file:', err);
+                              } finally {
+                                setIsDownloadMenuOpen(false);
+                                setDownloadStep('root');
+                                // reset input value to allow re-import same file name later
+                                e.target.value = '';
+                              }
+                            };
+                            input.click();
+                          }}>
+                            Import single file
+                          </button>
+                          {/* Hidden input for zip import */}
+                          <input id="kodek-import-zip" type="file" accept=".zip,application/zip" style={{ display: 'none' }} />
+                          <button className="button-secondary" onClick={() => {
+                            const input = document.getElementById('kodek-import-zip');
+                            if (!input) return;
+                            input.onchange = async (e) => {
+                              try {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const { default: JSZip } = await import('jszip');
+                                const zip = await JSZip.loadAsync(file);
+                                // Build a tree from zip entries
+                                const root = [];
+                                const dirMap = new Map(); // path -> node
+                                const ensureDir = (path) => {
+                                  if (!path) return null;
+                                  if (dirMap.has(path)) return dirMap.get(path);
+                                  const parts = path.split('/').filter(Boolean);
+                                  let currentChildren = root;
+                                  let currentPath = '';
+                                  let parentNode = null;
+                                  for (const part of parts) {
+                                    currentPath = currentPath ? `${currentPath}/${part}` : part;
+                                    let node = dirMap.get(currentPath);
+                                    if (!node) {
+                                      node = { id: Math.random().toString(36).slice(2,10), name: part, type: 'folder', children: [] };
+                                      dirMap.set(currentPath, node);
+                                      if (parentNode) parentNode.children.push(node); else root.push(node);
+                                    }
+                                    parentNode = node;
+                                  }
+                                  return parentNode;
+                                };
+                                await Promise.all(Object.keys(zip.files).map(async (name) => {
+                                  const entry = zip.files[name];
+                                  if (entry.dir) {
+                                    ensureDir(name.replace(/\/$/, ''));
+                                    return;
+                                  }
+                                  const folderPath = name.includes('/') ? name.substring(0, name.lastIndexOf('/')) : '';
+                                  const baseName = name.substring(name.lastIndexOf('/') + 1);
+                                  const parent = ensureDir(folderPath);
+                                  const content = await entry.async('string');
+                                  const fileNode = { id: Math.random().toString(36).slice(2,10), name: baseName, type: 'file', content };
+                                  if (parent) parent.children.push(fileNode); else root.push(fileNode);
+                                }));
+                                // Replace entire tree with imported one
+                                if (root.length > 0) setTree(root);
+                              } catch (err) {
+                                console.error('Failed to import zip:', err);
+                              } finally {
+                                setIsDownloadMenuOpen(false);
+                                setDownloadStep('root');
+                                e.target.value = '';
+                              }
+                            };
+                            input.click();
+                          }}>
+                            Import project (zip)
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
           <div className="editor-wrapper">

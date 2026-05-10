@@ -49,8 +49,9 @@
   }
 }
 
+/* Disable hover glow animation on panels (editor and output) */
 .panel:hover {
-  animation: glow 3s infinite;
+  animation: none;
 }
 
 .connection-error {

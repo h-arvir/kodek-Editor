@@ -201,6 +201,10 @@ io.on('connection', (socket) => {
         io.to(hostUser.id).emit('requestInitialState', {
           requesterId: socket.id,
         });
+        // Also request the project files tree from the host
+        io.to(hostUser.id).emit('requestFilesState', {
+          requesterId: socket.id,
+        });
       }
     } catch (error) {
       console.error(`Error joining room ${roomId}:`, error);
@@ -375,6 +379,21 @@ io.on('connection', (socket) => {
     );
     // Broadcast to all other users in the room
     socket.to(roomId).emit('languageChange', { userId, language });
+  });
+
+  // Handle project files tree updates
+  socket.on('filesTreeUpdate', ({ roomId, userId, tree }) => {
+    if (!roomId || !tree || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    socket.to(roomId).emit('filesTreeUpdate', { userId, tree });
+  });
+
+  // Host shares initial files state with a requester
+  socket.on('shareFilesState', ({ roomId, requesterId, tree }) => {
+    if (!roomId || !requesterId || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    if (!rooms.get(roomId).has(requesterId)) return;
+    io.to(requesterId).emit('initialFilesState', { tree });
   });
 
   // Handle code output sharing

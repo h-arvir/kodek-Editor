@@ -15,6 +15,8 @@ import { useCollaboration } from './context/collabration';
 import { ThemeProvider } from './context/theme';
 import { useCodeExecution } from './hooks/useCodeExecution';
 import { useEditor } from './hooks/useEditor';
+import { useProjectFiles } from './hooks/useProjectFiles';
+import { FileTreePanel } from './components/filetree/FileTreePanel';
 import { LANGUAGE_OPTIONS } from './utils/constants';
 
 /**
@@ -22,6 +24,7 @@ import { LANGUAGE_OPTIONS } from './utils/constants';
  */
 function App() {
   const [language, setLanguage] = useState('javascript');
+  const [isFileTreeOpen, setIsFileTreeOpen] = useState(false);
 
   // Initialize collaboration features
   const {
@@ -55,9 +58,27 @@ function App() {
     initialCode: LANGUAGE_OPTIONS[language].defaultCode,
   });
 
+  // Project files state (local, per user)
+  const {
+    tree,
+    setTree,
+    selectedFile,
+    selectedFileId,
+    addFile,
+    addFolder,
+    renameItem,
+    deleteItem,
+    setFileContent,
+    selectFile,
+  } = useProjectFiles();
+
   const currentCodeRef = useRef(code); // Ref to track current code for comparison
 
   const mouseMoveProps = useMouseProps();
+
+  const toggleFileTree = useCallback(() => {
+    setIsFileTreeOpen(prev => !prev);
+  }, []);
 
   // Initialize code execution
   const {
@@ -94,6 +115,30 @@ function App() {
   const executeCode = () => {
     runCode(code, LANGUAGE_OPTIONS[language].id);
   };
+
+  // Sync editor -> file content on change
+  const onEditorChange = useCallback(
+    (value) => {
+      const next = typeof value === 'string' ? value : value ?? '';
+      handleCodeChange(next);
+      if (selectedFileId) setFileContent(selectedFileId, next);
+    },
+    [handleCodeChange, selectedFileId, setFileContent],
+  );
+
+  // When a file is selected, load its content into the editor
+  useEffect(() => {
+    if (selectedFile && selectedFile.content !== undefined) {
+      handleCodeChange(selectedFile.content);
+    }
+  }, [selectedFileId]);
+
+  // Persist any editor changes (including remote) into the selected file
+  useEffect(() => {
+    if (selectedFileId) {
+      setFileContent(selectedFileId, code);
+    }
+  }, [code, selectedFileId, setFileContent]);
 
   // Listen for remote language changes
   useEffect(() => {
@@ -229,26 +274,50 @@ function App() {
         )}
 
         <main className={`main-content ${isFullScreen ? 'fullscreen-content' : ''}`}>
-          <div className="editor-container">
-            <RemoteCursors>
-              <CodeEditor
-                language={language}
-                code={code}
-                handleEditorDidMount={handleEditorDidMount}
-                isFullScreen={isFullScreen}
-                toggleFullScreen={toggleFullScreen}
-                toggleOutput={toggleOutput}
-                runCode={executeCode}
-                isLoading={isLoading}
-                {...mouseMoveProps}
-              />
-              <OutputPanel
-                isFullScreen={isFullScreen}
-                isOutputVisible={isOutputVisible}
-                output={output}
-                clearOutput={clearOutput}
-              />
-            </RemoteCursors>
+          <div className="editor-container" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+            {!isFullScreen && (
+              <div style={{ width: isFileTreeOpen ? 280 : 0, minWidth: isFileTreeOpen ? 220 : 0, maxWidth: isFileTreeOpen ? 360 : 0, overflow: 'hidden', transition: 'all 0.25s ease' }}>
+                {isFileTreeOpen && (
+                  <FileTreePanel
+                    tree={tree}
+                    selectedId={selectedFileId}
+                    onSelect={selectFile}
+                    onAddFile={addFile}
+                    onAddFolder={addFolder}
+                    onRename={renameItem}
+                    onDelete={deleteItem}
+                  />
+                )}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'stretch', gap: 12 }}>
+              <RemoteCursors>
+                <CodeEditor
+                  language={language}
+                  code={code}
+                  handleCodeChange={onEditorChange}
+                  handleEditorDidMount={handleEditorDidMount}
+                  isFullScreen={isFullScreen}
+                  toggleFullScreen={toggleFullScreen}
+                  toggleOutput={toggleOutput}
+                  runCode={executeCode}
+                  isLoading={isLoading}
+                  isFileTreeOpen={isFileTreeOpen}
+                  toggleFileTree={toggleFileTree}
+                  selectedFile={selectedFile}
+                  tree={tree}
+                  addFile={addFile}
+                  setTree={setTree}
+                  {...mouseMoveProps}
+                />
+                <OutputPanel
+                  isFullScreen={isFullScreen}
+                  isOutputVisible={isOutputVisible}
+                  output={output}
+                  clearOutput={clearOutput}
+                />
+              </RemoteCursors>
+            </div>
           </div>
         </main>
       </div>
