@@ -1,8 +1,27 @@
 import { createServer } from 'http';
+import { createRequire } from 'module';
 
 import cors from 'cors';
 import express from 'express';
 import { Server } from 'socket.io';
+
+// node-pty is a native CJS module — load via createRequire so ESM server works
+const require = createRequire(import.meta.url);
+let pty = null;
+try {
+  pty = require('node-pty');
+  console.log('✓ node-pty loaded — embedded terminal enabled');
+} catch {
+  console.warn('⚠  node-pty not available — embedded terminal disabled. Run: npm install node-pty');
+}
+
+// PTY sessions: one per socket
+const terminalSessions = new Map(); // socketId → ptyProcess
+
+const DEFAULT_SHELL =
+  process.platform === 'win32'
+    ? (process.env.COMSPEC || 'powershell.exe')
+    : (process.env.SHELL || '/bin/bash');
 
 const app = express();
 app.use(cors());
@@ -243,13 +262,13 @@ io.on('connection', (socket) => {
   // Share current state (code, language, output) with a specific requester
   socket.on(
     'shareInitialState',
-    ({ roomId, requesterId, code, language, output }) => {
+    ({ roomId, requesterId, code, language, output, comments }) => {
       if (
         !roomId ||
         !requesterId ||
         code === undefined ||
         language === undefined ||
-        output === undefined || // Ensure output is included
+        output === undefined ||
         !currentRoom ||
         roomId !== currentRoom
       ) {
@@ -265,7 +284,6 @@ io.on('connection', (socket) => {
         );
         return;
       }
-      // Ensure the requester is actually in the room
       if (!rooms.get(roomId).has(requesterId)) {
         console.log(
           `Invalid initial state share request: Requester ${requesterId} not found in room ${roomId}.`,
@@ -277,14 +295,39 @@ io.on('connection', (socket) => {
         `Sharing initial state in room ${roomId} from user ${socket.id} to ${requesterId}`,
       );
 
-      // Send the complete initial state to the specific requester
       io.to(requesterId).emit('initialState', {
         code,
         language,
         output,
+        comments: Array.isArray(comments) ? comments : [],
       });
     },
   );
+
+  // ── Inline line comments (relay only — state lives on clients) ────────────
+
+  const validateRoom = () =>
+    currentRoom && rooms.has(currentRoom) && rooms.get(currentRoom).has(socket.id);
+
+  socket.on('lineComment:add', ({ roomId, comment }) => {
+    if (!roomId || !comment || roomId !== currentRoom || !validateRoom()) return;
+    socket.to(roomId).emit('lineComment:add', { comment });
+  });
+
+  socket.on('lineComment:reply', ({ roomId, commentId, reply }) => {
+    if (!roomId || !commentId || !reply || roomId !== currentRoom || !validateRoom()) return;
+    socket.to(roomId).emit('lineComment:reply', { commentId, reply });
+  });
+
+  socket.on('lineComment:resolve', ({ roomId, commentId }) => {
+    if (!roomId || !commentId || roomId !== currentRoom || !validateRoom()) return;
+    socket.to(roomId).emit('lineComment:resolve', { commentId });
+  });
+
+  socket.on('lineComment:delete', ({ roomId, commentId }) => {
+    if (!roomId || !commentId || roomId !== currentRoom || !validateRoom()) return;
+    socket.to(roomId).emit('lineComment:delete', { commentId });
+  });
 
   // Handle cursor position updates
   socket.on('cursorMove', ({ roomId, position, visible }) => {
@@ -703,6 +746,62 @@ io.on('connection', (socket) => {
     });
   });
 
+  // ── Embedded Terminal (node-pty) ─────────────────────────────────────────
+
+  socket.on('pty:create', ({ cols = 80, rows = 24 } = {}) => {
+    if (!pty) {
+      socket.emit('pty:error', { message: 'Terminal not available on this server. Install node-pty.' });
+      return;
+    }
+    if (terminalSessions.has(socket.id)) return; // session already running
+
+    try {
+      const ptyProc = pty.spawn(DEFAULT_SHELL, [], {
+        name: 'xterm-256color',
+        cols: Math.max(cols, 10),
+        rows: Math.max(rows, 5),
+        cwd: process.env.HOME || process.cwd(),
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor',
+          FORCE_COLOR: '1',
+        },
+      });
+
+      terminalSessions.set(socket.id, ptyProc);
+
+      ptyProc.onData((data) => socket.emit('pty:data', { data }));
+      ptyProc.onExit(({ exitCode }) => {
+        terminalSessions.delete(socket.id);
+        socket.emit('pty:exit', { exitCode });
+        console.log(`Terminal exited for ${socket.id} (code ${exitCode})`);
+      });
+
+      console.log(`Terminal created for ${socket.id} (${DEFAULT_SHELL})`);
+    } catch (err) {
+      console.error('PTY spawn failed:', err.message);
+      socket.emit('pty:error', { message: `Failed to start terminal: ${err.message}` });
+    }
+  });
+
+  socket.on('pty:input', ({ data }) => {
+    terminalSessions.get(socket.id)?.write(data);
+  });
+
+  socket.on('pty:resize', ({ cols, rows }) => {
+    const proc = terminalSessions.get(socket.id);
+    if (!proc) return;
+    try { proc.resize(Math.max(cols, 10), Math.max(rows, 5)); } catch { /* ignore */ }
+  });
+
+  socket.on('pty:destroy', () => {
+    const proc = terminalSessions.get(socket.id);
+    if (!proc) return;
+    try { proc.kill(); } catch { /* ignore */ }
+    terminalSessions.delete(socket.id);
+  });
+
   // Handle disconnection
   socket.on('disconnect', (reason) => {
     console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
@@ -762,7 +861,14 @@ io.on('connection', (socket) => {
         `User ${socket.id} disconnected without being in a tracked room.`,
       );
     }
-    currentRoom = null; // Clear room association
+    // Kill any running PTY session for this socket
+    const ptyOnDisconnect = terminalSessions.get(socket.id);
+    if (ptyOnDisconnect) {
+      try { ptyOnDisconnect.kill(); } catch { /* ignore */ }
+      terminalSessions.delete(socket.id);
+    }
+
+    currentRoom = null;
     currentUser = null;
   });
 });

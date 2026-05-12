@@ -1,108 +1,69 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { compileCode } from '../components/api/api-service';
-import { useCollaboration } from '../context/collabration'; // Import collaboration hook
+import { useCollaboration } from '../context/collabration';
 
-/**
- * Custom hook for code execution functionality
- *
- * @returns {Object} Code execution state and handlers
- */
-export function useCodeExecution() {
+export function useCodeExecution({ onNewOutput } = {}) {
   const [output, setOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { handleCodeOutput } = useCollaboration(); // Get the output handler
+  const { handleCodeOutput } = useCollaboration();
 
-  /**
-   * Format timestamp for output logs
-   * @returns {string} Formatted timestamp
-   */
-  const getTimestamp = () => {
-    return new Date().toLocaleTimeString();
-  };
+  // Stable ref so the remote-output listener never needs re-registration
+  const onNewOutputRef = useRef(onNewOutput);
+  useEffect(() => { onNewOutputRef.current = onNewOutput; });
 
-  /**
-   * Run the provided code with the specified language ID
-   * @param {string} code - Source code to execute
-   * @param {number} languageId - Language ID for the compiler
-   */
+  const getTimestamp = () => new Date().toLocaleTimeString();
+
   const runCode = async (code, languageId) => {
     setIsLoading(true);
-    // Append "Running code..." instead of overwriting
-    setOutput(
-      (prev) =>
-        prev +
-        `<span class="output-time">[${getTimestamp()}]</span> <span class="output-info">Running code...</span>\n\n`,
-    );
+
+    const runningMsg = `\n\x1b[2m[${getTimestamp()}]\x1b[0m \x1b[36mRunning...\x1b[0m\n`;
+    onNewOutputRef.current?.(runningMsg);
+    setOutput((prev) => prev + runningMsg);
 
     try {
       const result = await compileCode(code, languageId);
-
       let resultOutput = '';
+
       if (result.status.id === 3) {
-        // Accepted
-        resultOutput = `<span class="output-time">[${getTimestamp()}]</span> <span class="output-success">Execution successful!</span>\n\n${result.stdout || 'No output'}\n`;
+        const timeStr   = result.time ? ` · ${result.time}s` : '';
+        const stdout    = (result.stdout || '(no output)').trimEnd();
+        resultOutput    = `\x1b[32m✓ Execution successful${timeStr}\x1b[0m\n\n${stdout}\n`;
       } else if (result.status.id === 6) {
-        // Compilation error
-        resultOutput = `<span class="output-time">[${getTimestamp()}]</span> <span class="output-error">Compilation Error:</span>\n${result.compile_output}\n`;
+        const compOut   = (result.compile_output || '').trimEnd();
+        resultOutput    = `\x1b[31m✗ Compilation error\x1b[0m\n\n${compOut}\n`;
       } else {
-        // Runtime error or other issues
-        const errorMessage =
-          result.stderr ||
-          result.compile_output ||
-          result.message ||
-          'Unknown error';
-        resultOutput = `<span class="output-time">[${getTimestamp()}]</span> <span class="output-error">Error (${result.status.description}):</span>\n${errorMessage}\n`;
+        const errMsg    = (result.stderr || result.compile_output || result.message || 'Unknown error').trimEnd();
+        resultOutput    = `\x1b[31m✗ ${result.status.description}\x1b[0m\n\n${errMsg}\n`;
       }
 
-      // Update local state first
+      onNewOutputRef.current?.(resultOutput);
       setOutput((prev) => prev + resultOutput);
-      // Then propagate the final output string to others
       handleCodeOutput(resultOutput);
     } catch (error) {
-      setOutput(
-        (prev) =>
-          prev +
-          `<span class="output-time">[${getTimestamp()}]</span> <span class="output-error">Error: ${error.message}</span>\n`,
-      );
-      // Propagate error message as well
-      handleCodeOutput(
-        `<span class="output-time">[${getTimestamp()}]</span> <span class="output-error">Error: ${error.message}</span>\n`,
-      );
+      const errMsg = `\x1b[31m✗ Error: ${error.message}\x1b[0m\n`;
+      onNewOutputRef.current?.(errMsg);
+      setOutput((prev) => prev + errMsg);
+      handleCodeOutput(errMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Clear the output panel
-   */
-  const clearOutput = () => {
-    setOutput(
-      `<span class="output-time">[${getTimestamp()}]</span> <span class="output-info">Output cleared</span>\n`,
-    );
-  };
+  const clearOutput = () => setOutput('');
 
-  // Listen for remote code output updates
+  // Write remote execution output to the local terminal too
   useEffect(() => {
     const handleRemoteOutput = (event) => {
-      const { username, output: remoteOutput } = event.detail; // Destructure username
-      console.log(`Received remote code output from ${username}`);
-      // Prepend username info to the received output
-      const formattedRemoteOutput = `<span class="output-info">Output from ${username}:</span>\n${remoteOutput}`;
-      setOutput((prev) => prev + formattedRemoteOutput); // Append formatted remote output
+      const { username, output: remoteOutput } = event.detail;
+      const formatted = `\n\x1b[2mOutput from ${username}:\x1b[0m\n${remoteOutput}`;
+      onNewOutputRef.current?.(formatted);
+      setOutput((prev) => prev + formatted);
     };
 
     window.addEventListener('remoteCodeOutput', handleRemoteOutput);
-    return () =>
-      window.removeEventListener('remoteCodeOutput', handleRemoteOutput);
-  }, []); // Empty dependency array ensures this runs once on mount
+    return () => window.removeEventListener('remoteCodeOutput', handleRemoteOutput);
+  }, []);
 
-  return {
-    output,
-    setOutput, // Expose the setOutput function
-    isLoading,
-    runCode,
-    clearOutput,
-  };
+  return { output, setOutput, isLoading, runCode, clearOutput };
 }

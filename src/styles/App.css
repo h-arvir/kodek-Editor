@@ -23,6 +23,14 @@
   padding: 1rem;
 }
 
+.editor-area {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .editor-container {
   display: flex;
   height: 100%;

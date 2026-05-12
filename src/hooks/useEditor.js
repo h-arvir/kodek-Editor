@@ -13,7 +13,6 @@ export function useEditor({ initialCode }) {
   const [editorInstance, setEditorInstance] = useState(null);
   const [code, setCode] = useState(initialCode);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isOutputVisible, setIsOutputVisible] = useState(true);
   const monacoRef = useRef(null);
   const decorationsCollectionRef = useRef(null);
   
@@ -114,11 +113,6 @@ export function useEditor({ initialCode }) {
       return newState;
     });
   };
-
-  /**
-   * Toggle output panel visibility
-   */
-  const toggleOutput = () => setIsOutputVisible((prev) => !prev);
 
   // Listen for remote code changes
   useEffect(() => {
@@ -276,12 +270,10 @@ export function useEditor({ initialCode }) {
   return {
     code,
     isFullScreen,
-    isOutputVisible,
     editorInstance,
     isRemoteUpdateRef,
     handleEditorDidMount,
     handleCodeChange,
     toggleFullScreen,
-    toggleOutput,
   };
 }

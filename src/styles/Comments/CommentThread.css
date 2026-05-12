@@ -1,0 +1,369 @@
+/* ── Comment Thread Panel ────────────────────────────────────────────────── */
+
+.comment-thread-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border-glow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 480px;
+}
+
+/* Panel header */
+.comment-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--panel-header);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.comment-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.comment-count-badge {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+
+.comment-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: background 0.13s, color 0.13s;
+}
+
+.comment-close-btn:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+/* Thread list */
+.comment-threads-list {
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.comment-threads-list::-webkit-scrollbar { width: 4px; }
+.comment-threads-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Single thread */
+.comment-thread {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+}
+
+.comment-thread--resolved {
+  opacity: 0.55;
+}
+
+.comment-thread-header {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.comment-thread-header-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-thread-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.comment-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: background 0.13s, color 0.13s;
+}
+
+.comment-action-btn:hover {
+  background: var(--primary-transparent);
+  color: var(--primary-light);
+}
+
+.comment-action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+/* User dot (avatar) */
+.comment-user-dot {
+  display: inline-flex;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* Comment meta */
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.comment-username {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.comment-time {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.comment-text {
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+  word-break: break-word;
+}
+
+/* Replies */
+.comment-reply {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 0 0 26px;
+}
+
+.comment-reply-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Reply section at the bottom of each thread */
+.comment-reply-section {
+  padding: 6px 0 0 26px;
+}
+
+.comment-reply-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comment-input {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.13s;
+}
+
+.comment-input:focus {
+  border-color: var(--primary);
+}
+
+.comment-send-btn {
+  background: var(--primary-transparent);
+  border: 1px solid var(--border);
+  color: var(--primary-light);
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.13s;
+  flex-shrink: 0;
+}
+
+.comment-send-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+}
+
+.comment-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.comment-reply-toggle {
+  background: transparent;
+  border: none;
+  color: var(--primary-light);
+  font-size: 0.73rem;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: opacity 0.13s;
+}
+
+.comment-reply-toggle:hover {
+  opacity: 0.75;
+}
+
+/* New comment section */
+.comment-new-section {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-header);
+  flex-shrink: 0;
+}
+
+.comment-new-input-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: inherit;
+  padding: 6px 8px;
+  border-radius: 5px;
+  outline: none;
+  resize: none;
+  line-height: 1.45;
+  transition: border-color 0.13s;
+  box-sizing: border-box;
+}
+
+.comment-textarea:focus {
+  border-color: var(--primary);
+}
+
+.comment-new-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comment-hint {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  opacity: 0.55;
+}
+
+.comment-submit-btn {
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: opacity 0.13s;
+}
+
+.comment-submit-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.comment-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Monaco gutter glyph icons ───────────────────────────────────────────── */
+
+.comment-glyph--active,
+.comment-glyph--hover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.comment-glyph--active::before {
+  content: '●';
+  font-size: 10px;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.comment-glyph--hover::before {
+  content: '+';
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  line-height: 1;
+  opacity: 0.5;
+}
+
+/* ── Light theme ─────────────────────────────────────────────────────────── */
+
+.light .comment-thread-panel {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(251, 158, 198, 0.3);
+}
+
+.light .comment-glyph--active::before {
+  color: #e07aab;
+}
+
+.light .comment-action-btn:hover {
+  background: rgba(251, 158, 198, 0.15);
+  color: #e07aab;
+}
+
+.light .comment-reply-toggle {
+  color: #e07aab;
+}
+
+.light .comment-submit-btn {
+  background: #FB9EC6;
+}
+
+.light .comment-count-badge {
+  background: #FB9EC6;
+  color: #333;
+}
+
+.light .comment-textarea:focus,
+.light .comment-input:focus {
+  border-color: #FB9EC6;
+}
+
+.light .comment-send-btn:hover:not(:disabled) {
+  background: #FB9EC6;
+}

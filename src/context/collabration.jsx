@@ -371,14 +371,14 @@ export function CollaborationProvider({ children }) {
     // Files state request handled in useProjectFiles via socket.on('requestFilesState')
 
     // Initial state handler (from server to new user)
-    const handleInitialState = ({ code, language, output }) => {
+    const handleInitialState = ({ code, language, output, comments }) => {
       console.log('Received initial state from host:', {
         code: code ? '[code present]' : '[no code]',
         language,
         output: output ? '[output present]' : '[no output]',
+        comments: comments?.length ?? 0,
       });
-      initialStateRef.current = { code, language, output };
-      // Dispatch event so App/hooks can react
+      initialStateRef.current = { code, language, output, comments: comments ?? [] };
       window.dispatchEvent(new CustomEvent('initialStateReceived'));
     };
 

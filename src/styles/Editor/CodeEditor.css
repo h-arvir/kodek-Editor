@@ -25,10 +25,7 @@
   border-right: 1px solid var(--border);
 }
 
-.panel:last-child {
-  flex: 1;
-  /* Allow the output panel to handle its own flex behavior for animations */
-}
+/* .output-panel handles its own flex in OutputPanel.css */
 
 .panel.fullscreen {
   position: fixed;
