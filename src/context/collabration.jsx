@@ -357,6 +357,12 @@ export function CollaborationProvider({ children }) {
       window.dispatchEvent(new CustomEvent('session:banned'));
     };
 
+    // Server sends this only to the user being promoted to host
+    const handleHostTransferred = ({ newHost }) => {
+      setSelfInfo((prev) => prev ? { ...prev, host: true, canEdit: true } : newHost);
+      setCanEdit(true);
+    };
+
     socket.on('codeChange', handleRemoteCodeChange);
     socket.on('languageChange', handleRemoteLanguageChange);
     socket.on('codeOutput', handleRemoteCodeOutput);
@@ -367,6 +373,7 @@ export function CollaborationProvider({ children }) {
     socket.on('permissionChanged', handlePermissionChanged);
     socket.on('kicked', handleKicked);
     socket.on('banned', handleBanned);
+    socket.on('hostTransferred', handleHostTransferred);
 
     return () => {
       socket.off('codeChange', handleRemoteCodeChange);
@@ -379,6 +386,7 @@ export function CollaborationProvider({ children }) {
       socket.off('permissionChanged', handlePermissionChanged);
       socket.off('kicked', handleKicked);
       socket.off('banned', handleBanned);
+      socket.off('hostTransferred', handleHostTransferred);
     };
   }, [selfInfo]);
 

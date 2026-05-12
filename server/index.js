@@ -116,8 +116,17 @@ io.on('connection', (socket) => {
         username: leavingUser?.username,
       });
 
-      // Send updated user list
-      const roomUsers = Array.from(rooms.get(roomId).values());
+      // Transfer host if the leaving user was host
+      let roomUsers = Array.from(rooms.get(roomId).values());
+      if (leavingUser?.host && roomUsers.length > 0) {
+        const newHostUser = roomUsers[0];
+        const updatedNewHost = { ...newHostUser, host: true, canEdit: true };
+        rooms.get(roomId).set(newHostUser.id, updatedNewHost);
+        roomUsers = Array.from(rooms.get(roomId).values());
+        io.to(newHostUser.id).emit('hostTransferred', { newHost: updatedNewHost });
+        console.log(`Transferred host to ${newHostUser.username} on leave`);
+      }
+
       io.in(roomId).emit('userList', roomUsers);
 
       if (rooms.get(roomId).size === 0) {
@@ -908,13 +917,15 @@ io.on('connection', (socket) => {
 
         if (leavingUser.host && roomData.size > 0) {
           // If the leaving user was the host and others remain
-          const newHostUser = updatedRoomUsers[0]; // Assign the first remaining user as host
+          const newHostUser = updatedRoomUsers[0];
           if (newHostUser) {
-            const updatedNewHost = { ...newHostUser, host: true };
-            roomData.set(newHostUser.id, updatedNewHost); // Update the map
-            updatedRoomUsers = Array.from(roomData.values()); // Refresh user list with new host status
+            const updatedNewHost = { ...newHostUser, host: true, canEdit: true };
+            roomData.set(newHostUser.id, updatedNewHost);
+            updatedRoomUsers = Array.from(roomData.values());
+            // Tell the promoted client they are now host with full edit rights
+            io.to(newHostUser.id).emit('hostTransferred', { newHost: updatedNewHost });
             console.log(
-              `Assigned new host: ${newHostUser.username} (${newHostUser.id}) in room ${currentRoom}`,
+              `Transferred host to ${newHostUser.username} (${newHostUser.id}) in room ${currentRoom}`,
             );
           }
         }
