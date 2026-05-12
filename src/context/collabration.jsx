@@ -336,6 +336,11 @@ export function CollaborationProvider({ children }) {
 
     const handlePermissionChanged = ({ canEdit: nextCanEdit }) => {
       setCanEdit(nextCanEdit);
+      setSelfInfo((prev) => prev ? { ...prev, canEdit: nextCanEdit } : prev);
+      if (nextCanEdit) {
+        // Pull the host's current code so any changes missed while read-only are applied
+        socket.emit('requestStateSync');
+      }
     };
 
     // Host transferred (server sends updated userList — selfInfo check tells us)

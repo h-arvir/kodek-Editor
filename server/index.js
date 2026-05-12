@@ -821,6 +821,16 @@ io.on('connection', (socket) => {
     console.log(`Host set canEdit=${canEdit} for user ${targetUser.username} in room ${roomId}`);
   });
 
+  // User requests full state re-sync (e.g. after being given write permission)
+  socket.on('requestStateSync', () => {
+    if (!currentRoom || !rooms.has(currentRoom)) return;
+    const hostUser = Array.from(rooms.get(currentRoom).values()).find((u) => u.host);
+    if (hostUser) {
+      io.to(hostUser.id).emit('requestInitialState', { requesterId: socket.id });
+      console.log(`State sync requested by ${socket.id} in room ${currentRoom} → asking host ${hostUser.id}`);
+    }
+  });
+
   // ── Typing indicator ─────────────────────────────────────────────────────
   socket.on('typing', () => {
     if (!currentRoom || !currentUser) return;
