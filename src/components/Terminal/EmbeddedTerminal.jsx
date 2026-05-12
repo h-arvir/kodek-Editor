@@ -36,25 +36,36 @@ const DARK_THEME = {
 
 const LIGHT_THEME = { ...DARK_THEME, background: '#1a1a2e', cursor: '#FB9EC6', selection: 'rgba(251,158,198,0.25)' };
 
-function useXterm({ containerRef, socket, isDark, isReady }) {
+function useXterm({ containerRef, socket, isDark, isReady, canEdit }) {
   const termRef       = useRef(null);
   const fitRef        = useRef(null);
   const writeQueueRef = useRef([]);
+  const canEditRef    = useRef(canEdit);
   const [status, setStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Keep ref in sync so the onData closure always sees the latest value
+  useEffect(() => {
+    canEditRef.current = canEdit;
+    if (termRef.current) {
+      termRef.current.options.disableStdin = !canEdit;
+      termRef.current.options.cursorBlink  = canEdit;
+    }
+  }, [canEdit]);
 
   useEffect(() => {
     if (!isReady || !containerRef.current || termRef.current) return;
 
     const term = new Terminal({
-      theme:       isDark ? DARK_THEME : LIGHT_THEME,
-      fontFamily:  "'Fira Code', 'Consolas', 'Courier New', monospace",
-      fontSize:    13,
-      lineHeight:  1.4,
-      cursorBlink: true,
-      cursorStyle: 'block',
-      scrollback:  2000,
-      convertEol:  true,
+      theme:        isDark ? DARK_THEME : LIGHT_THEME,
+      fontFamily:   "'Fira Code', 'Consolas', 'Courier New', monospace",
+      fontSize:     13,
+      lineHeight:   1.4,
+      cursorBlink:  canEditRef.current,
+      cursorStyle:  'block',
+      scrollback:   2000,
+      convertEol:   true,
+      disableStdin: !canEditRef.current,
       allowProposedApi: true,
     });
 
@@ -78,7 +89,10 @@ function useXterm({ containerRef, socket, isDark, isReady }) {
       setStatus('running');
     });
 
-    const inputDisp = term.onData((data) => socket.emit('pty:input', { data }));
+    // Guard: only emit input when the user has edit permission
+    const inputDisp = term.onData((data) => {
+      if (canEditRef.current) socket.emit('pty:input', { data });
+    });
 
     const onData  = ({ data })     => term.write(data);
     const onExit  = ({ exitCode }) => { setStatus('exited'); term.write(`\n\x1b[33m[Process exited with code ${exitCode}]\x1b[0m\n`); };
@@ -162,7 +176,7 @@ function useXterm({ containerRef, socket, isDark, isReady }) {
 
 export const EmbeddedTerminal = forwardRef(function EmbeddedTerminal({ isVisible, onClose }, ref) {
   const containerRef = useRef(null);
-  const { socket }   = useCollaboration();
+  const { socket, canEdit } = useCollaboration();
   const { isDark }   = useTheme();
   const [isReady, setIsReady] = useState(false);
 
@@ -170,7 +184,7 @@ export const EmbeddedTerminal = forwardRef(function EmbeddedTerminal({ isVisible
     if (isVisible && !isReady) setIsReady(true);
   }, [isVisible, isReady]);
 
-  const { status, errorMsg, clear, restart, write, downloadOutput } = useXterm({ containerRef, socket, isDark, isReady });
+  const { status, errorMsg, clear, restart, write, downloadOutput } = useXterm({ containerRef, socket, isDark, isReady, canEdit });
 
   useImperativeHandle(ref, () => ({ write }), [write]);
 
@@ -204,6 +218,12 @@ export const EmbeddedTerminal = forwardRef(function EmbeddedTerminal({ isVisible
           </button>
         </div>
       </div>
+
+      {!canEdit && (
+        <div className="term-readonly-bar">
+          Terminal is view-only — input disabled
+        </div>
+      )}
 
       <motion.div
         className="term-body"

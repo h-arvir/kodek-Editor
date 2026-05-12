@@ -877,6 +877,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('pty:input', ({ data }) => {
+    // Block read-only users from sending terminal input
+    if (currentRoom && rooms.has(currentRoom)) {
+      const user = rooms.get(currentRoom).get(socket.id);
+      if (user && !user.canEdit && !user.host) return;
+    }
     terminalSessions.get(socket.id)?.write(data);
   });
 
