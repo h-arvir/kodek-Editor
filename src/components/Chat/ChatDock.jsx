@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { useCollaboration } from '../../context/collabration';
 import { formatTime } from '../../utils/time';
+import '../../styles/Chat/ChatDock.css';
 
 const MESSAGE_MAX_LENGTH = 500;
 
@@ -17,7 +18,6 @@ export function ChatDock({ isOpen, setIsOpen }) {
   const {
     chatMessages,
     sendChatMessage,
-    unreadCount,
     markChatAsRead,
     selfInfo,
     activeUsers,
@@ -78,64 +78,79 @@ export function ChatDock({ isOpen, setIsOpen }) {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="chat-panel dock-chat-panel"
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          className="cd-panel"
+          initial={{ opacity: 0, y: 16, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
+          exit={{ opacity: 0, y: 16, scale: 0.97 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
         >
-          <div className="chat-header">
-            <h3>Chat</h3>
-            <div className="chat-controls">
-              <div className="chat-active-users">{activeUsers.length} online</div>
-              <button className="chat-close-btn" onClick={() => setIsOpen(false)} aria-label="Close chat">
-                &times;
+          {/* Header */}
+          <div className="cd-header">
+            <span className="cd-title">chat</span>
+            <div className="cd-header-right">
+              <span className="cd-online">
+                <span className="cd-online-dot" />
+                {activeUsers.length}
+              </span>
+              <button className="cd-close" onClick={() => setIsOpen(false)} aria-label="Close chat">
+                ✕
               </button>
             </div>
           </div>
 
-          <div className="chat-messages">
+          {/* Messages */}
+          <div className="cd-messages">
             {chatMessages.length === 0 ? (
-              <div className="no-messages">
-                <p>No messages yet. Start a conversation!</p>
-              </div>
+              <div className="cd-empty">no messages yet</div>
             ) : (
-              chatMessages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`chat-message ${msg.userId === selfInfo?.id ? 'own-message' : 'other-message'}`}
-                >
-                  <div className="message-header">
-                    <span className="message-username" style={{ color: msg.color }}>
-                      {msg.userId === selfInfo?.id ? 'You' : msg.username}
-                    </span>
-                    <span className="message-time">{formatTime(msg.timestamp)}</span>
+              chatMessages.map((msg, idx) => {
+                const isSelf = msg.userId === selfInfo?.id;
+                const color = msg.color;
+                return (
+                  <div key={idx} className={`cd-msg${isSelf ? ' cd-msg--self' : ''}`}>
+                    <div className="cd-msg-meta">
+                      <span
+                        className="cd-avatar"
+                        style={{ borderColor: color, color }}
+                      >
+                        {msg.username[0]?.toUpperCase()}
+                      </span>
+                      <span className="cd-name" style={{ color }}>
+                        {isSelf ? 'you' : msg.username}
+                      </span>
+                      <span className="cd-time">{formatTime(msg.timestamp)}</span>
+                    </div>
+                    <div className="cd-text">{msg.text}</div>
                   </div>
-                  <div className="message-content">{msg.text}</div>
-                </div>
-              ))
+                );
+              })
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="typing-indicator-row">
-            {typingList.length > 0 && (
-              <span className="typing-indicator">
-                <span className="typing-dots"><span /><span /><span /></span>
-                {typingList.join(', ')} {typingList.length === 1 ? 'is' : 'are'} typing…
-              </span>
-            )}
-          </div>
+          {/* Typing indicator */}
+          {typingList.length > 0 && (
+            <div className="cd-typing">
+              <span className="cd-dots"><span /><span /><span /></span>
+              <span>{typingList.join(', ')} {typingList.length === 1 ? 'is' : 'are'} typing</span>
+            </div>
+          )}
 
-          <form onSubmit={handleSend} className="chat-input-container">
-            <div ref={emojiRef} style={{ position: 'relative' }}>
-              <button type="button" className="chat-send-btn" onClick={() => setEmojiOpen((v) => !v)} title="Emoji">
-                <FiSmile />
+          {/* Input */}
+          <form className="cd-form" onSubmit={handleSend}>
+            <div ref={emojiRef} className="cd-emoji-wrap">
+              <button
+                type="button"
+                className="cd-icon-btn"
+                onClick={() => setEmojiOpen((v) => !v)}
+                aria-label="Emoji"
+              >
+                <FiSmile size={17} />
               </button>
               {emojiOpen && (
-                <div className="emoji-picker">
+                <div className="cd-emoji-picker">
                   {EMOJIS.map((e) => (
-                    <button key={e} type="button" className="emoji-btn" onClick={() => insertEmoji(e)}>
+                    <button key={e} type="button" onClick={() => insertEmoji(e)}>
                       {e}
                     </button>
                   ))}
@@ -145,23 +160,27 @@ export function ChatDock({ isOpen, setIsOpen }) {
 
             <input
               ref={inputRef}
+              className="cd-input"
               type="text"
               value={message}
               onChange={handleInputChange}
-              placeholder="Type a message..."
+              placeholder="message..."
               maxLength={MESSAGE_MAX_LENGTH}
-              className="chat-input"
             />
+
             <button
               type="submit"
-              className="chat-send-btn"
+              className="cd-icon-btn cd-send-btn"
               disabled={!message.trim() || message.length > MESSAGE_MAX_LENGTH}
+              aria-label="Send"
             >
-              <FiSend />
+              <FiSend size={16} />
             </button>
           </form>
 
-          <div className="chat-character-count">{message.length}/{MESSAGE_MAX_LENGTH}</div>
+          {message.length > 0 && (
+            <div className="cd-count">{message.length}/{MESSAGE_MAX_LENGTH}</div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
