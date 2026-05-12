@@ -33,22 +33,22 @@ Two + / − buttons in the dock or header that adjust the Monaco fontSize option
 5. Word Wrap & Minimap Toggle
 Two dock buttons to toggle wordWrap: 'on'/'off' and minimap: { enabled: true/false } — both already in the Monaco options object. Five lines of state each.
 
-6. File Search (Ctrl+P)
+6. File Search (Ctrl+P)-----
 A fuzzy-search modal over the file tree. Press Ctrl+P, type a filename, and jump to it. The file tree data is already in tree state — just flatten it and filter.
 
 7. Character / Line Count Status Bar
 A thin bar at the bottom of the editor showing current line, column, total lines, and character count. Monaco exposes editor.getPosition() and editor.getModel().getLineCount() — read them on onDidChangeCursorPosition.
 
-8. Download Output as .txt
+8. Download Output as .txt-------
 A button in the output panel to download the current output content as a text file. Three lines — create a Blob, URL.createObjectURL, trigger a click. Pairs well with the existing import/export flow.
 
-9. Emoji Reactions in Chat
+9. Emoji Reactions in Chat--------
 An emoji picker button next to the send button in ChatDock. Users can react to the last message or insert an emoji into their message. Libraries like emoji-mart are small and self-contained.
 
-10. User Presence Avatars in Header
+10. User Presence Avatars in Header------
 Show coloured avatar circles (initials) for each active user in the room, directly in the Header component. The activeUsers array is already passed to Header — just render a circle per user using their color and username[0]. Shows at a glance who is in the room.
 
-11. Breadcrumb / Current File Display
+11. Breadcrumb / Current File Display--------
 Show the currently open filename in the editor panel header next to "Kodek Editor". selectedFile.name is already a prop passed to CodeEditor — it just needs to be rendered.
 
 12. Auto-Save Indicator

@@ -143,6 +143,10 @@ export function useEditor({ initialCode }) {
           },
         ]);
       }
+
+      // Reset after all remote edits are applied so local actions
+      // (AI replace, insert, etc.) can propagate without needing a keydown first
+      isRemoteUpdateRef.current = false;
     };
 
     window.addEventListener('remoteCodeChange', handleRemoteCodeChange);
