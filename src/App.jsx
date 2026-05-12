@@ -22,6 +22,8 @@ import { useLineComments } from './hooks/useLineComments';
 import { FileTreePanel } from './components/filetree/FileTreePanel';
 import { EmbeddedTerminal } from './components/Terminal/EmbeddedTerminal';
 import { FileSearchModal } from './components/Editor/FileSearchModal';
+import { WaitingRoom } from './components/Room/WaitingRoom';
+import { AdmissionPopup } from './components/Room/AdmissionPopup';
 import { LANGUAGE_OPTIONS } from './utils/constants';
 
 /**
@@ -52,6 +54,16 @@ function App() {
     handleLanguageChange: propagateLanguageChange,
     shareInitialState,
     initialStateRef,
+    // Room permissions
+    isWaiting,
+    canEdit,
+    joinRequests,
+    setJoinRequests,
+    admitUser,
+    denyUser,
+    kickUser,
+    banUser,
+    setPermission,
   } = useCollaboration();
 
   // Initialize editor hook
@@ -208,6 +220,24 @@ function App() {
     currentCodeRef.current = code;
   }, [code]);
 
+  // Show an alert and reload when kicked or banned
+  useEffect(() => {
+    const onKicked = () => {
+      alert('You were removed from the room by the host.');
+      window.location.reload();
+    };
+    const onBanned = () => {
+      alert('You have been banned from this room.');
+      window.location.reload();
+    };
+    window.addEventListener('session:kicked', onKicked);
+    window.addEventListener('session:banned', onBanned);
+    return () => {
+      window.removeEventListener('session:kicked', onKicked);
+      window.removeEventListener('session:banned', onBanned);
+    };
+  }, []);
+
   // Handle local language changes and propagate
   const handleLocalLanguageChange = useCallback(
     (newLanguage) => {
@@ -361,20 +391,30 @@ function App() {
       window.removeEventListener('initialStateReceived', applyInitialState);
   }, [editorInstance, initialStateRef, handleCodeChange, setOutput]); // Add dependencies
 
-  // Render join room form if not connected
+  // Render join room form or waiting room if not yet in session
   if (!joinedRoom || !selfInfo) {
     return (
       <ThemeProvider>
-        <JoinRoom
-          username={username}
-          setUsername={setUsername}
-          roomId={roomId}
-          setRoomId={setRoomId}
-          joinRoom={joinRoom}
-          connectionError={connectionError}
-          usernameError={usernameError}
-          isConnected={isConnected}
-        />
+        {isWaiting ? (
+          <WaitingRoom
+            roomId={roomId}
+            onCancel={() => {
+              // Disconnect from waiting — server will clean up the lobby entry
+              window.location.reload();
+            }}
+          />
+        ) : (
+          <JoinRoom
+            username={username}
+            setUsername={setUsername}
+            roomId={roomId}
+            setRoomId={setRoomId}
+            joinRoom={joinRoom}
+            connectionError={connectionError}
+            usernameError={usernameError}
+            isConnected={isConnected}
+          />
+        )}
       </ThemeProvider>
     );
   }
@@ -387,11 +427,15 @@ function App() {
         {!isFullScreen && (
           <Header
             language={language}
-            setLanguage={handleLocalLanguageChange} // Use the new handler
+            setLanguage={handleLocalLanguageChange}
             languageOptions={LANGUAGE_OPTIONS}
             roomId={roomId}
             username={selfInfo.username}
             activeUsers={activeUsers}
+            selfInfo={selfInfo}
+            onSetPermission={setPermission}
+            onKick={kickUser}
+            onBan={banUser}
           />
         )}
 
@@ -435,6 +479,7 @@ function App() {
                     toggleAIPanel={toggleAIPanel}
                     onAIAction={handleAIAction}
                     onToggleFileSearch={onToggleFileSearch}
+                    canEdit={canEdit}
                     comments={comments}
                     linesWithComments={linesWithComments}
                     onAddComment={addComment}
@@ -476,6 +521,18 @@ function App() {
             onClose={() => setIsFileSearchOpen(false)}
             tree={tree}
             onSelect={selectFile}
+          />
+
+          <AdmissionPopup
+            requests={joinRequests}
+            onAdmit={(userId) => {
+              admitUser(userId);
+              setJoinRequests((prev) => prev.filter((r) => r.userId !== userId));
+            }}
+            onDeny={(userId) => {
+              denyUser(userId);
+              setJoinRequests((prev) => prev.filter((r) => r.userId !== userId));
+            }}
           />
 
           {hasOpenedTerminal && (

@@ -63,6 +63,7 @@ export const CodeEditor = memo(
     onAIAction,
     toggleTerminal,
     onToggleFileSearch,
+    canEdit = true,
     // ── Line comments ─────────────────────────
     comments,
     linesWithComments,
@@ -219,6 +220,14 @@ export const CodeEditor = memo(
       });
     };
 
+    // Keep Monaco readOnly in sync with canEdit prop — the options prop alone
+    // is not reliable after mount because @monaco-editor/react may skip the update
+    useEffect(() => {
+      if (editorRef.current) {
+        editorRef.current.updateOptions({ readOnly: !canEdit });
+      }
+    }, [canEdit]);
+
     // Sync Monaco glyph decorations whenever commented lines change
     useEffect(() => {
       const editor = editorRef.current;
@@ -358,10 +367,11 @@ export const CodeEditor = memo(
               </>
             }
           </motion.button>
+
           <motion.button
             className="button"
             onClick={runCode}
-            disabled={isLoading}
+            disabled={isLoading || !canEdit}
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.03 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
@@ -641,6 +651,7 @@ export const CodeEditor = memo(
               onMount={wrappedEditorDidMount}
               options={{
                 fontSize: fontSize,
+                readOnly: !canEdit,
                 fontFamily: "'Fira Code', 'Consolas', monospace",
                 fontLigatures: true,
                 minimap: { enabled: false },

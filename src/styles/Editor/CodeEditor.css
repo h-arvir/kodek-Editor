@@ -58,6 +58,20 @@ body.editor-fullscreen .dock-container {
   z-index: 100; /* Ensure it's above other elements */
 }
 
+.readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  user-select: none;
+}
+
 .panel-header-title {
   display: flex;
   align-items: center;
