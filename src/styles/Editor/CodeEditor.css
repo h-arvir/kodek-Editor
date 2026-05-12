@@ -61,13 +61,6 @@ body.editor-fullscreen .dock-container {
   z-index: 100; /* Ensure it's above other elements */
 }
 
-.editor-wrapper {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-  background-color: var(--editor-bg, var(--bg-darker));
-}
-
 /* Make editor take full width when in fullscreen mode */
 .panel.fullscreen .editor-wrapper {
   width: 100%;
@@ -122,8 +115,9 @@ body.editor-fullscreen .dock-container {
 }
 
 .editor-wrapper {
-  flex-grow: 1;
+  flex: 1;
   height: 100%;
+  overflow: hidden;
   position: relative;
   background-color: var(--editor-bg, var(--bg-darker));
 }

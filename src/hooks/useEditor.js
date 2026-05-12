@@ -125,7 +125,7 @@ export function useEditor({ initialCode }) {
     if (!editorInstance) return;
 
     const handleRemoteCodeChange = (event) => {
-      const manaco = monacoRef.current;
+      const monaco = monacoRef.current;
 
       isRemoteUpdateRef.current = true;
 
@@ -134,7 +134,7 @@ export function useEditor({ initialCode }) {
       for (const change of changes) {
         console.log(
           change,
-          new manaco.Range(
+          new monaco.Range(
             change.range.endColumn + 1,
             change.range.endLineNumber + 1,
             change.range.startColumn,

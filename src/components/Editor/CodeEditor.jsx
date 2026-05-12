@@ -3,17 +3,14 @@ import Editor, { loader } from '@monaco-editor/react';
 import '../../styles/Editor/CodeEditor.css';
 
 import { memo, useState, useEffect } from 'react';
-import { FolderTree } from "lucide-react";
 import { FaFolderTree } from "react-icons/fa6";
 import { motion, AnimatePresence } from 'framer-motion';
 
 import {
   VscTerminalPowershell,
   VscFeedback,
-  VscComment,
-  VscFolder,
   VscCloudDownload,
-  } from 'react-icons/vsc';
+} from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
 import { BsMic, BsCameraVideo } from 'react-icons/bs';
 
@@ -25,11 +22,7 @@ import { VideoChat } from '../Audio/VideoChat';
 import { useCollaboration } from '../../context/collabration';
 import { useTheme } from '../../context/theme';
 
-// Define a function to configure custom Monaco themes
 const configureMonacoThemes = (monaco) => {
-  console.log('Configuring Monaco themes...');
-  
-  // Define a custom light theme with grey background
   monaco.editor.defineTheme('kodek-light-grey', {
     base: 'vs', // Use VS light as the base
     inherit: true, // Inherit rules from the base theme
@@ -46,8 +39,6 @@ const configureMonacoThemes = (monaco) => {
       'editor.lineHighlightBorder': '#d0f0fd', // Secondary color for line highlight border
     }
   });
-  
-  console.log('Custom theme defined: kodek-light-grey');
 };
 
 export const CodeEditor = memo(
@@ -76,73 +67,27 @@ export const CodeEditor = memo(
     const [downloadStep, setDownloadStep] = useState('root'); // 'root' | 'import' | 'export'
     // file tree visibility is controlled by parent via props
     const { unreadCount } = useCollaboration();
-    const { theme, toggleTheme, isDark } = useTheme();
-    
-    // Configure Monaco themes when the component mounts
+    const { toggleTheme, isDark } = useTheme();
+
     useEffect(() => {
-      // Configure Monaco themes when loader is ready
-      loader.init().then(monaco => {
-        configureMonacoThemes(monaco);
-      });
+      loader.init().then(configureMonacoThemes);
     }, []);
-    
-    // Wrap the original handleEditorDidMount to ensure our theme is applied
+
     const wrappedEditorDidMount = (editor, monaco) => {
-      console.log('Editor mounted, applying custom theme...');
-      
-      // Apply our custom theme configuration
       configureMonacoThemes(monaco);
-      
-      // Explicitly set the theme on the editor instance if in light mode
       if (!isDark) {
-        console.log('Setting editor theme to kodek-light-grey');
         monaco.editor.setTheme('kodek-light-grey');
       }
-      
-      // Call the original handleEditorDidMount if provided
       if (handleEditorDidMount) {
         handleEditorDidMount(editor, monaco);
       }
     };
-    
-    // Handle the toggle output with additional debugging
-    const handleToggleOutput = () => {
-      console.log('toggle button clicked!');
-      if (typeof toggleOutput === 'function') {
-        toggleOutput();
-      } else {
-        console.error('toggleOutput is not a function');
-      }
-    };
-    
-    // Handle the profile button click to toggle chat
-    const handleProfileClick = () => {
-      console.log('chat button clicked!');
-      setIsChatOpen(!isChatOpen);
-    };
-    
-    // Handle the audio chat button click
-    const handleAudioChatClick = () => {
-      console.log('audio chat button clicked!');
-      setIsAudioChatOpen(!isAudioChatOpen);
-    };
-    
-    // Handle the video chat button click
-    const handleVideoChatClick = () => {
-      console.log('video chat button clicked!');
-      setIsVideoChatOpen(!isVideoChatOpen);
-    };
 
     const items = [
-      // {
-      //   icon: <VscHome size={18} />,
-      //   label: 'Home',
-      //   onClick: () => alert('Home!'),
-      // },
       {
         icon: <VscTerminalPowershell size={18} />,
         label: 'Toggle Output',
-        onClick: handleToggleOutput,
+        onClick: toggleOutput,
       },
       {
         icon: (
@@ -154,17 +99,17 @@ export const CodeEditor = memo(
           </div>
         ),
         label: 'Chat',
-        onClick: handleProfileClick,
+        onClick: () => setIsChatOpen(prev => !prev),
       },
       {
         icon: <BsMic size={18} />,
         label: 'Audio Chat',
-        onClick: handleAudioChatClick,
+        onClick: () => setIsAudioChatOpen(prev => !prev),
       },
       {
         icon: <BsCameraVideo size={18} />,
         label: 'Video Chat',
-        onClick: handleVideoChatClick,
+        onClick: () => setIsVideoChatOpen(prev => !prev),
       },
       {
         icon: <FaFolderTree size={18} />,
@@ -421,8 +366,7 @@ export const CodeEditor = memo(
                                 const file = e.target.files?.[0];
                                 if (!file) return;
                                 const text = await file.text();
-                                const added = addFile({ name: file.name, content: text });
-                                // Select newly added file via addFile’s side-effect
+                                addFile({ name: file.name, content: text });
                               } catch (err) {
                                 console.error('Failed to import file:', err);
                               } finally {
@@ -454,7 +398,6 @@ export const CodeEditor = memo(
                                   if (!path) return null;
                                   if (dirMap.has(path)) return dirMap.get(path);
                                   const parts = path.split('/').filter(Boolean);
-                                  let currentChildren = root;
                                   let currentPath = '';
                                   let parentNode = null;
                                   for (const part of parts) {

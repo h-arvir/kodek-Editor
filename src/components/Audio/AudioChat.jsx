@@ -3,28 +3,11 @@ import { useCollaboration } from '../../context/collabration';
 import { BsMic, BsMicMute } from 'react-icons/bs';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../../styles/Audio/AudioChat.css';
-
-// STUN servers for NAT traversal
-const ICE_SERVERS = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-  ]
-};
+import { ICE_SERVERS } from '../../utils/webrtcConfig';
 
 export const AudioChat = ({ isActive, onToggle }) => {
   const { socket, roomId, selfInfo, joinedRoom } = useCollaboration();
-  
-  // Debug logging
-  useEffect(() => {
-    console.log('AudioChat context values:', {
-      socket: !!socket,
-      roomId,
-      selfInfo,
-      joinedRoom,
-      isActive
-    });
-  }, [socket, roomId, selfInfo, joinedRoom, isActive]);
+
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
@@ -235,7 +218,7 @@ export const AudioChat = ({ isActive, onToggle }) => {
     }
     
     // Close all peer connections
-    peerConnectionsRef.current.forEach((peerConnection, userId) => {
+    peerConnectionsRef.current.forEach((peerConnection) => {
       peerConnection.close();
     });
     peerConnectionsRef.current.clear();

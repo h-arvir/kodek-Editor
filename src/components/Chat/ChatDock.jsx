@@ -3,6 +3,7 @@ import { FiSend } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useCollaboration } from '../../context/collabration';
+import { formatTime } from '../../utils/time';
 
 const MESSAGE_MAX_LENGTH = 500;
 
@@ -15,16 +16,10 @@ export function ChatDock({ isOpen, setIsOpen }) {
     selfInfo,
     activeUsers,
   } = useCollaboration();
-  
+
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  
-  // Format timestamp
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
   
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {

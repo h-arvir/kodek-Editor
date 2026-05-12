@@ -121,7 +121,7 @@ export function CollaborationProvider({ children }) {
       setActiveUsers((prev) => prev.filter((user) => user.id !== userId));
       setUserCursors((prev) => {
         const { [userId]: removedUserCursor, ...rest } = prev;
-        console.log('Removed user cursoer', removedUserCursor);
+        console.log('Removed user cursor', removedUserCursor);
         return rest;
       });
       setUserMousePointers((prev) => {

@@ -1,7 +1,1 @@
-/* Import themes CSS which contains all the theme variables */
 @import url('./themes.css');
-
-/* Common variables that are not theme-dependent */
-:root {
-  /* Any additional variables that are shared across themes but not defined in themes.css */
-}

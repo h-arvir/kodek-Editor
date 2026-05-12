@@ -4,19 +4,7 @@ import { useCollaboration } from '@/context/collabration';
 // Simple id generator
 const makeId = () => Math.random().toString(36).slice(2, 10);
 
-// const STORAGE_KEY = 'kodek_files_v1';
-
-// Node shape:
-// { id, name, type: 'file' | 'folder', children?: Node[], content?: string }
-
-// Local storage disabled for collaborative mode
-function loadFromStorage() {
-  return null;
-}
-
-function saveToStorage(data) {
-  // no-op
-}
+// Node shape: { id, name, type: 'file' | 'folder', children?: Node[], content?: string }
 
 function findNode(root, id) {
   if (!root) return null;
@@ -114,7 +102,6 @@ export function useProjectFiles() {
   const isApplyingRemoteRef = useRef(false);
 
   useEffect(() => {
-    saveToStorage(tree);
     if (isApplyingRemoteRef.current) {
       // Do not broadcast when applying a remote update
       isApplyingRemoteRef.current = false;
@@ -193,17 +180,6 @@ export function useProjectFiles() {
   }, []);
 
   const selectFile = useCallback((id) => setSelectedFileId(id), []);
-
-  // When joining a room as host, share our files state when requested
-  useEffect(() => {
-    if (!socket) return;
-    const handleRequestFilesState = ({ requesterId }) => {
-      if (!joinedRoom || !roomId) return;
-      socket.emit('shareFilesState', { roomId, requesterId, tree });
-    };
-    socket.on('requestFilesState', handleRequestFilesState);
-    return () => socket.off('requestFilesState', handleRequestFilesState);
-  }, [socket, joinedRoom, roomId, tree]);
 
   return {
     tree,
