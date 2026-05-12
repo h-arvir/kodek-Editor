@@ -58,6 +58,23 @@ body.editor-fullscreen .dock-container {
   z-index: 100; /* Ensure it's above other elements */
 }
 
+.panel-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.breadcrumb-sep {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin: 0 4px;
+}
+
+.breadcrumb-file {
+  color: var(--primary-lighter);
+  font-weight: 600;
+}
+
 /* Make editor take full width when in fullscreen mode */
 .panel.fullscreen .editor-wrapper {
   width: 100%;

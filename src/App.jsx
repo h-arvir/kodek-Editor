@@ -21,6 +21,7 @@ import { useAIAssistant } from './hooks/useAIAssistant';
 import { useLineComments } from './hooks/useLineComments';
 import { FileTreePanel } from './components/filetree/FileTreePanel';
 import { EmbeddedTerminal } from './components/Terminal/EmbeddedTerminal';
+import { FileSearchModal } from './components/Editor/FileSearchModal';
 import { LANGUAGE_OPTIONS } from './utils/constants';
 
 /**
@@ -33,6 +34,7 @@ function App() {
   const [aiSelectedCode, setAiSelectedCode] = useState('');
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [hasOpenedTerminal, setHasOpenedTerminal] = useState(false);
+  const [isFileSearchOpen, setIsFileSearchOpen] = useState(false);
 
   // Initialize collaboration features
   const {
@@ -138,6 +140,8 @@ function App() {
       return next;
     });
   }, []);
+
+  const onToggleFileSearch = useCallback(() => setIsFileSearchOpen((v) => !v), []);
 
   // Line comments
   const {
@@ -430,6 +434,7 @@ function App() {
                     isAIPanelOpen={isAIPanelOpen}
                     toggleAIPanel={toggleAIPanel}
                     onAIAction={handleAIAction}
+                    onToggleFileSearch={onToggleFileSearch}
                     comments={comments}
                     linesWithComments={linesWithComments}
                     onAddComment={addComment}
@@ -465,6 +470,13 @@ function App() {
               </div>
             </div>
           </div>
+
+          <FileSearchModal
+            isOpen={isFileSearchOpen}
+            onClose={() => setIsFileSearchOpen(false)}
+            tree={tree}
+            onSelect={selectFile}
+          />
 
           {hasOpenedTerminal && (
             <div className="terminal-section" style={{ display: isTerminalOpen ? 'flex' : 'none' }}>

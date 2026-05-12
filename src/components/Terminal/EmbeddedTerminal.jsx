@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { motion } from 'framer-motion';
-import { VscTerminal, VscClearAll, VscClose, VscAdd } from 'react-icons/vsc';
+import { VscTerminal, VscClearAll, VscClose, VscAdd, VscDesktopDownload } from 'react-icons/vsc';
 
 import '@xterm/xterm/css/xterm.css';
 import '../../styles/Terminal/Terminal.css';
@@ -118,6 +118,24 @@ function useXterm({ containerRef, socket, isDark, isReady }) {
 
   const clear = () => termRef.current?.clear();
 
+  const downloadOutput = () => {
+    if (!termRef.current) return;
+    const buf = termRef.current.buffer.active;
+    const lines = [];
+    for (let i = 0; i < buf.length; i++) {
+      lines.push(buf.getLine(i)?.translateToString(true) ?? '');
+    }
+    const content = lines.join('\n').trimEnd();
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'terminal-output.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  };
+
   const restart = () => {
     if (!termRef.current) return;
     writeQueueRef.current = [];
@@ -139,7 +157,7 @@ function useXterm({ containerRef, socket, isDark, isReady }) {
     }
   }, []);
 
-  return { status, errorMsg, clear, restart, write };
+  return { status, errorMsg, clear, restart, write, downloadOutput };
 }
 
 export const EmbeddedTerminal = forwardRef(function EmbeddedTerminal({ isVisible, onClose }, ref) {
@@ -152,7 +170,7 @@ export const EmbeddedTerminal = forwardRef(function EmbeddedTerminal({ isVisible
     if (isVisible && !isReady) setIsReady(true);
   }, [isVisible, isReady]);
 
-  const { status, errorMsg, clear, restart, write } = useXterm({ containerRef, socket, isDark, isReady });
+  const { status, errorMsg, clear, restart, write, downloadOutput } = useXterm({ containerRef, socket, isDark, isReady });
 
   useImperativeHandle(ref, () => ({ write }), [write]);
 
@@ -175,6 +193,9 @@ export const EmbeddedTerminal = forwardRef(function EmbeddedTerminal({ isVisible
               <VscAdd size={14} />
             </button>
           )}
+          <button className="term-icon-btn" onClick={downloadOutput} title="Download output">
+            <VscDesktopDownload size={14} />
+          </button>
           <button className="term-icon-btn" onClick={clear} title="Clear">
             <VscClearAll size={14} />
           </button>

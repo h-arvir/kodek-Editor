@@ -78,6 +78,10 @@ export function CollaborationProvider({ children }) {
   const [chatMessages, setChatMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Typing indicators: { [userId]: username }
+  const [typingUsers, setTypingUsers] = useState({});
+  const typingTimeoutsRef = useRef({});
+
   // Ref to store initial state received from host
   const initialStateRef = useRef(null);
 
@@ -241,6 +245,15 @@ export function CollaborationProvider({ children }) {
     setUnreadCount(0);
   };
 
+  /**
+   * Emit a typing event to room members
+   */
+  const sendTyping = () => {
+    if (joinedRoom && roomId && isConnected) {
+      socket.emit('typing');
+    }
+  };
+
   useEffect(() => {
     if (!selfInfo) return;
 
@@ -286,16 +299,29 @@ export function CollaborationProvider({ children }) {
       }
     };
 
+    const handleUserTyping = ({ userId, username: typingName }) => {
+      setTypingUsers((prev) => ({ ...prev, [userId]: typingName }));
+      clearTimeout(typingTimeoutsRef.current[userId]);
+      typingTimeoutsRef.current[userId] = setTimeout(() => {
+        setTypingUsers((prev) => {
+          const { [userId]: _, ...rest } = prev;
+          return rest;
+        });
+      }, 2500);
+    };
+
     socket.on('codeChange', handleRemoteCodeChange);
     socket.on('languageChange', handleRemoteLanguageChange);
     socket.on('codeOutput', handleRemoteCodeOutput);
     socket.on('chatMessage', handleChatMessage);
+    socket.on('userTyping', handleUserTyping);
 
     return () => {
       socket.off('codeChange', handleRemoteCodeChange);
       socket.off('languageChange', handleRemoteLanguageChange);
       socket.off('codeOutput', handleRemoteCodeOutput);
       socket.off('chatMessage', handleChatMessage);
+      socket.off('userTyping', handleUserTyping);
     };
   }, [selfInfo]);
 
@@ -465,6 +491,8 @@ export function CollaborationProvider({ children }) {
     sendChatMessage,
     unreadCount,
     markChatAsRead,
+    typingUsers,
+    sendTyping,
   };
 
   return (

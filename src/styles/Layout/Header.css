@@ -144,4 +144,32 @@
   color: rgba(251, 158, 198, 1); /* FB9EC6 text color */
 }
 
+/* Avatar stack */
+.avatar-stack {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: default;
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  transition: transform 0.15s;
+}
+.user-avatar:hover { transform: scale(1.15); }
+.light .user-avatar { border-color: rgba(0,0,0,0.1); }
+
 /* Rest of header styles */

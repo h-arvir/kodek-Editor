@@ -746,6 +746,12 @@ io.on('connection', (socket) => {
     });
   });
 
+  // ── Typing indicator ─────────────────────────────────────────────────────
+  socket.on('typing', () => {
+    if (!currentRoom || !currentUser) return;
+    socket.to(currentRoom).emit('userTyping', { userId: socket.id, username: currentUser.username });
+  });
+
   // ── Embedded Terminal (node-pty) ─────────────────────────────────────────
 
   socket.on('pty:create', ({ cols = 80, rows = 24 } = {}) => {

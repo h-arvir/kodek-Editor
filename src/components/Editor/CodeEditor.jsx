@@ -62,6 +62,7 @@ export const CodeEditor = memo(
     toggleAIPanel,
     onAIAction,
     toggleTerminal,
+    onToggleFileSearch,
     // ── Line comments ─────────────────────────
     comments,
     linesWithComments,
@@ -72,6 +73,7 @@ export const CodeEditor = memo(
     ...props
   }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [fontSize, setFontSize] = useState(14);
     const [isAudioChatOpen, setIsAudioChatOpen] = useState(false);
     const [isVideoChatOpen, setIsVideoChatOpen] = useState(false);
     const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
@@ -132,6 +134,19 @@ export const CodeEditor = memo(
       if (handleEditorDidMount) handleEditorDidMount(editor, monaco);
 
       editorRef.current = editor;
+
+      // ── Font size: Ctrl+= increase, Ctrl+- decrease ──────────────────────
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal, () => {
+        setFontSize((s) => Math.min(s + 1, 26));
+      });
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus, () => {
+        setFontSize((s) => Math.max(s - 1, 10));
+      });
+
+      // ── Ctrl+P → file search ─────────────────────────────────────────────
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
+        if (typeof onToggleFileSearch === 'function') onToggleFileSearch();
+      });
 
       // ── AI floating bar: selection tracking ──────────────────────────────
       editor.onDidChangeCursorSelection(() => {
@@ -289,7 +304,17 @@ export const CodeEditor = memo(
     return (
       <div className={`panel ${isFullScreen ? 'fullscreen' : ''}`}>
         <div className="panel-header">
-          {!isFullScreen && <span>Kodek Editor</span>}
+          {!isFullScreen && (
+            <span className="panel-header-title">
+              Kodek Editor
+              {selectedFile?.name && (
+                <>
+                  <span className="breadcrumb-sep"> / </span>
+                  <span className="breadcrumb-file">{selectedFile.name}</span>
+                </>
+              )}
+            </span>
+          )}
           {isFullScreen && <span>Fullscreen Mode</span>}
           <motion.button
             className="button-secondary"
@@ -615,7 +640,7 @@ export const CodeEditor = memo(
               theme={isDark ? "vs-dark" : "kodek-light-grey"}
               onMount={wrappedEditorDidMount}
               options={{
-                fontSize: 14,
+                fontSize: fontSize,
                 fontFamily: "'Fira Code', 'Consolas', monospace",
                 fontLigatures: true,
                 minimap: { enabled: false },

@@ -25,23 +25,18 @@ export const Header = ({
             <span className="room-id">{roomId}</span>
           </div>
           <div className="users-badge">
-            <span className="users-label">Active</span>
-            <div className="users-list">
-              {activeUsers.map(
-                (
-                  user,
-                  index, // Added index for comma logic
-                ) => (
-                  <span
-                    key={user.id} // Use unique user.id as key
-                    style={{ color: user.color || '#10b981' }} // Use user.color directly
-                  >
-                    {user.username} {user.host && '(Host)'}
-                    {/* Use index to check if it's the last user */}
-                    {index < activeUsers.length - 1 ? ', ' : ''}
-                  </span>
-                ),
-              )}
+            <span className="users-label">In Room</span>
+            <div className="avatar-stack">
+              {activeUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="user-avatar"
+                  style={{ background: user.color || '#10b981' }}
+                  title={`${user.username}${user.host ? ' (Host)' : ''}`}
+                >
+                  {user.username[0]?.toUpperCase()}
+                </div>
+              ))}
             </div>
           </div>
           <div className="current-user-badge">
