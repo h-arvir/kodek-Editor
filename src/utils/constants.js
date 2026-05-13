@@ -30,11 +30,13 @@ export const LANGUAGE_OPTIONS = {
 };
 
 /**
- * Socket.io connection configuration
+ * Socket.io connection configuration.
+ * SERVER_URL is injected at build time via vite.config.js define — no VITE_ prefix needed.
+ * In production set SERVER_URL in your hosting env vars (e.g. Vercel) to the backend URL.
  * @type {Object}
  */
 export const SOCKET_CONFIG = {
-  serverUrl: import.meta.env.VITE_SOCKET_URL,
+  serverUrl: import.meta.env.SERVER_URL || 'http://localhost:3001',
   options: {
     timeout: 10000,
     forceNew: true,

@@ -1,35 +1,39 @@
+import 'dotenv/config';
 import { createServer } from 'http';
-import { createRequire } from 'module';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import cors from 'cors';
 import express from 'express';
 import { Server } from 'socket.io';
 
-// node-pty is a native CJS module — load via createRequire so ESM server works
-const require = createRequire(import.meta.url);
-let pty = null;
-try {
-  pty = require('node-pty');
-  console.log('✓ node-pty loaded — embedded terminal enabled');
-} catch {
-  console.warn('⚠  node-pty not available — embedded terminal disabled. Run: npm install node-pty');
-}
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// PTY sessions: one per socket
-const terminalSessions = new Map(); // socketId → ptyProcess
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// In production set CORS_ORIGIN to your frontend URL (e.g. https://your-app.vercel.app).
+// Multiple origins can be comma-separated.
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim());
 
-const DEFAULT_SHELL =
-  process.platform === 'win32'
-    ? (process.env.COMSPEC || 'powershell.exe')
-    : (process.env.SHELL || '/bin/bash');
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow same-origin requests (origin is undefined) and listed origins
+    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+    else callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  methods: ['GET', 'POST'],
+  credentials: true,
+};
 
 const app = express();
-app.use(cors());
+app.use(cors(corsOptions));
+app.use(express.json());
 
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // Allow all origins for testing
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -38,32 +42,66 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
 });
 
-// Store active rooms and their participants
+// ── Judge0 execution proxy ────────────────────────────────────────────────────
+// API keys stay on the server; the browser never sees them.
+const JUDGE0_BASE = `https://${process.env.RAPIDAPI_HOST || 'judge0-ce.p.rapidapi.com'}`;
+const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_ATTEMPTS = 10;
+
+app.post('/api/execute', async (req, res) => {
+  const { source_code, language_id, stdin = '' } = req.body;
+
+  if (!process.env.RAPIDAPI_KEY) {
+    return res.status(500).json({ error: 'Server is missing RAPIDAPI_KEY configuration.' });
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
+    'X-RapidAPI-Host': process.env.RAPIDAPI_HOST || 'judge0-ce.p.rapidapi.com',
+  };
+
+  try {
+    // Submit code
+    const submitRes = await fetch(`${JUDGE0_BASE}/submissions?base64_encoded=false&fields=*`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ source_code, language_id, stdin }),
+    });
+    const { token } = await submitRes.json();
+    if (!token) return res.status(500).json({ error: 'No submission token returned by Judge0.' });
+
+    // Poll until done
+    for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      const pollRes = await fetch(
+        `${JUDGE0_BASE}/submissions/${token}?base64_encoded=false&fields=*`,
+        { headers }
+      );
+      const result = await pollRes.json();
+      if (result.status?.id > 2) return res.json(result); // finished
+    }
+
+    return res.status(504).json({ error: 'Execution timed out. Please try again.' });
+  } catch (err) {
+    console.error('Judge0 proxy error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Collaboration state ───────────────────────────────────────────────────────
+
 // rooms: Map<roomId, Map<socketId, { id, username, color, cursor, host, canEdit }>>
 const rooms = new Map();
-
-// Lobby: users waiting for host approval
 // lobbies: Map<roomId, Map<socketId, { id, username, color }>>
 const lobbies = new Map();
-
-// Banned usernames per room
 // bannedUsers: Map<roomId, Set<username>>
 const bannedUsers = new Map();
 
-// --- Color Assignment Logic (similar to client) ---
 const colors = [
-  '#FF5252',
-  '#7C4DFF',
-  '#00BFA5',
-  '#FFD740',
-  '#64DD17',
-  '#448AFF',
-  '#FF6E40',
-  '#EC407A',
-  '#26A69A',
-  '#AB47BC',
-  '#5C6BC0',
-  '#FFA726',
+  '#FF5252', '#7C4DFF', '#00BFA5', '#FFD740', '#64DD17',
+  '#448AFF', '#FF6E40', '#EC407A', '#26A69A', '#AB47BC',
+  '#5C6BC0', '#FFA726',
 ];
 
 const assignUserColor = (username) => {
@@ -73,9 +111,8 @@ const assignUserColor = (username) => {
   }
   return colors[Math.abs(hash) % colors.length];
 };
-// --- End Color Assignment ---
 
-// Basic health check endpoint
+// ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -84,39 +121,42 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ── Serve built frontend in production ───────────────────────────────────────
+// Only active when the dist/ folder exists (i.e. after `npm run build`).
+// For split deployment (frontend on Vercel) this block is never reached.
+const distPath = path.join(__dirname, '../dist');
+import { existsSync } from 'fs';
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+      res.sendFile(path.join(distPath, 'index.html'));
+    }
+  });
+}
+
+// ── Socket.io ─────────────────────────────────────────────────────────────────
+
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
   let currentRoom = null;
-  let currentUser = null; // Store { id, username, color }
+  let currentUser = null;
 
-  // Send immediate confirmation to client
   socket.emit('connected', { id: socket.id });
 
-  // Add ping-pong for connection testing
   socket.on('ping', (callback) => {
-    // console.log(`Ping from ${socket.id}`); // Reduce noise
-    if (typeof callback === 'function') {
-      callback({ time: Date.now(), id: socket.id });
-    } else {
-      socket.emit('pong', { time: Date.now(), id: socket.id });
-    }
+    if (typeof callback === 'function') callback({ time: Date.now(), id: socket.id });
+    else socket.emit('pong', { time: Date.now(), id: socket.id });
   });
 
-  // Handle explicit room leaving (optional, disconnect handles most cases)
   socket.on('leaveRoom', (roomId) => {
     if (roomId && rooms.has(roomId) && rooms.get(roomId).has(socket.id)) {
-      console.log(`User ${socket.id} explicitly leaving room ${roomId}`);
       socket.leave(roomId);
       const leavingUser = rooms.get(roomId).get(socket.id);
       rooms.get(roomId).delete(socket.id);
 
-      // Notify others the user left
-      socket.to(roomId).emit('userLeft', {
-        userId: socket.id,
-        username: leavingUser?.username,
-      });
+      socket.to(roomId).emit('userLeft', { userId: socket.id, username: leavingUser?.username });
 
-      // Transfer host if the leaving user was host
       let roomUsers = Array.from(rooms.get(roomId).values());
       if (leavingUser?.host && roomUsers.length > 0) {
         const newHostUser = roomUsers[0];
@@ -124,71 +164,41 @@ io.on('connection', (socket) => {
         rooms.get(roomId).set(newHostUser.id, updatedNewHost);
         roomUsers = Array.from(rooms.get(roomId).values());
         io.to(newHostUser.id).emit('hostTransferred', { newHost: updatedNewHost });
-        console.log(`Transferred host to ${newHostUser.username} on leave`);
       }
 
       io.in(roomId).emit('userList', roomUsers);
 
-      if (rooms.get(roomId).size === 0) {
-        console.log(`Deleting empty room: ${roomId}`);
-        rooms.delete(roomId);
-      }
-      if (currentRoom === roomId) {
-        currentRoom = null;
-        currentUser = null;
-      }
+      if (rooms.get(roomId).size === 0) rooms.delete(roomId);
+      if (currentRoom === roomId) { currentRoom = null; currentUser = null; }
     }
   });
 
-  // Join a collaboration room
   socket.on('joinRoom', ({ roomId, username }) => {
     try {
-      console.log(
-        `User ${username} (${socket.id}) attempting to join room ${roomId}`,
-      );
-
-      // Basic validation
       if (!roomId || !username) {
         socket.emit('error', { message: 'Room ID and Username are required.' });
         return;
       }
 
-      // Leave previous room if any
       if (currentRoom && currentRoom !== roomId) {
-        console.log(`User ${username} leaving previous room ${currentRoom}`);
         socket.leave(currentRoom);
         if (rooms.has(currentRoom)) {
           const leavingUser = rooms.get(currentRoom).get(socket.id);
           rooms.get(currentRoom).delete(socket.id);
-          // Notify others the user left the old room
-          socket.to(currentRoom).emit('userLeft', {
-            userId: socket.id,
-            username: leavingUser?.username,
-          });
-          // Send updated user list for the old room
-          const oldRoomUsers = Array.from(rooms.get(currentRoom).values());
-          io.in(currentRoom).emit('userList', oldRoomUsers);
-          if (rooms.get(currentRoom).size === 0) {
-            console.log(`Deleting empty room: ${currentRoom}`);
-            rooms.delete(currentRoom);
-          }
+          socket.to(currentRoom).emit('userLeft', { userId: socket.id, username: leavingUser?.username });
+          io.in(currentRoom).emit('userList', Array.from(rooms.get(currentRoom).values()));
+          if (rooms.get(currentRoom).size === 0) rooms.delete(currentRoom);
         }
       }
 
-      // Check if user is banned from this room
       const banned = bannedUsers.get(roomId);
       if (banned && banned.has(username)) {
         socket.emit('error', { message: 'You have been banned from this room.' });
         return;
       }
 
-      // Initialize room if doesn't exist
-      if (!rooms.has(roomId)) {
-        console.log(`Creating new room: ${roomId}`);
-        rooms.set(roomId, new Map());
-      }
+      if (!rooms.has(roomId)) rooms.set(roomId, new Map());
 
-      // Check if username already exists in the room OR the lobby
       const existingUsers = Array.from(rooms.get(roomId).values());
       const lobbyUsers = lobbies.has(roomId) ? Array.from(lobbies.get(roomId).values()) : [];
       const isDuplicateUsername =
@@ -196,39 +206,32 @@ io.on('connection', (socket) => {
         lobbyUsers.some((u) => u.username === username);
 
       if (isDuplicateUsername) {
-        console.log(`Username ${username} is already taken in room ${roomId}`);
         socket.emit('error', { message: 'Username is already taken in this room' });
         return;
       }
 
       const userColor = assignUserColor(username);
 
-      // If room already has users, route through lobby (host must admit)
       if (rooms.get(roomId).size > 0) {
         const hostUser = existingUsers.find((u) => u.host);
         if (hostUser) {
           if (!lobbies.has(roomId)) lobbies.set(roomId, new Map());
           const lobbyUser = { id: socket.id, username, color: userColor };
           lobbies.get(roomId).set(socket.id, lobbyUser);
-          currentRoom = roomId; // track so disconnect cleans up lobby
+          currentRoom = roomId;
           currentUser = lobbyUser;
           socket.emit('waitingForHost', { roomId });
           io.to(hostUser.id).emit('joinRequest', { userId: socket.id, username, color: userColor });
-          console.log(`User ${username} waiting in lobby for room ${roomId}`);
           return;
         }
       }
 
-      // First user — joins directly as host
       socket.join(roomId);
       currentRoom = roomId;
       currentUser = { id: socket.id, username, color: userColor };
-
       rooms.get(roomId).set(socket.id, { ...currentUser, cursor: null, host: true, canEdit: true });
 
       const roomUsers = Array.from(rooms.get(roomId).values());
-      console.log(`Room ${roomId} users:`, roomUsers.map((u) => `${u.username}(${u.color})`).join(', '));
-
       socket.emit('roomJoined', { roomId, users: roomUsers, self: { ...currentUser, host: true, canEdit: true } });
       io.in(roomId).emit('userList', roomUsers);
     } catch (error) {
@@ -237,64 +240,25 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle code changes
   socket.on('codeChange', ({ roomId, userId, data }) => {
     if (!roomId || data === undefined || !currentRoom || roomId !== currentRoom) return;
     if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
-
-    // Block read-only users from broadcasting edits
     const senderUser = rooms.get(roomId).get(socket.id);
     if (!senderUser?.canEdit && !senderUser?.host) return;
-
     socket.to(roomId).emit('codeChange', { userId, data });
   });
 
-  // Share current state (code, language, output) with a specific requester
-  socket.on(
-    'shareInitialState',
-    ({ roomId, requesterId, code, language, output, comments }) => {
-      if (
-        !roomId ||
-        !requesterId ||
-        code === undefined ||
-        language === undefined ||
-        output === undefined ||
-        !currentRoom ||
-        roomId !== currentRoom
-      ) {
-        console.log(
-          `Invalid initial state share request: Missing/invalid data or not in room.`,
-          { roomId, requesterId, code, language, output, currentRoom },
-        );
-        return;
-      }
-      if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-        console.log(
-          `Invalid initial state share request: Room ${roomId} doesn't exist or user ${socket.id} not in it.`,
-        );
-        return;
-      }
-      if (!rooms.get(roomId).has(requesterId)) {
-        console.log(
-          `Invalid initial state share request: Requester ${requesterId} not found in room ${roomId}.`,
-        );
-        return;
-      }
+  socket.on('shareInitialState', ({ roomId, requesterId, code, language, output, comments }) => {
+    if (!roomId || !requesterId || code === undefined || language === undefined || output === undefined || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    if (!rooms.get(roomId).has(requesterId)) return;
+    io.to(requesterId).emit('initialState', {
+      code, language, output,
+      comments: Array.isArray(comments) ? comments : [],
+    });
+  });
 
-      console.log(
-        `Sharing initial state in room ${roomId} from user ${socket.id} to ${requesterId}`,
-      );
-
-      io.to(requesterId).emit('initialState', {
-        code,
-        language,
-        output,
-        comments: Array.isArray(comments) ? comments : [],
-      });
-    },
-  );
-
-  // ── Inline line comments (relay only — state lives on clients) ────────────
+  // ── Inline line comments ──────────────────────────────────────────────────
 
   const validateRoom = () =>
     currentRoom && rooms.has(currentRoom) && rooms.get(currentRoom).has(socket.id);
@@ -319,109 +283,52 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('lineComment:delete', { commentId });
   });
 
-  // Handle cursor position updates
   socket.on('cursorMove', ({ roomId, position, visible }) => {
-    if (!roomId || !position || !currentRoom || roomId !== currentRoom) {
-      // console.warn(`Invalid cursor move: Missing data or wrong room. Room: ${roomId}, Current: ${currentRoom}`);
-      return;
-    }
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      // console.warn(`Invalid cursor move: Room ${roomId} doesn't exist or user ${socket.id} not in it.`);
-      return;
-    }
-
+    if (!roomId || !position || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
     const roomData = rooms.get(roomId);
     const userInfo = roomData.get(socket.id);
-
-    if (!userInfo) {
-      console.warn(`User info not found for ${socket.id} in room ${roomId}`);
-      return;
-    }
-
-    // Update cursor position in server state
+    if (!userInfo) return;
     userInfo.cursor = position;
-    roomData.set(socket.id, userInfo); // Update the map entry
-
-    // Broadcast to all other users in the room
+    roomData.set(socket.id, userInfo);
     socket.to(roomId).emit('cursorUpdate', {
       userId: socket.id,
       username: userInfo.username,
-      position: position,
+      position,
       visible,
-      color: userInfo.color, // Include color
+      color: userInfo.color,
     });
   });
 
   socket.on('mouse-move', ({ roomId, coordinates, visible }) => {
-    if (!roomId || roomId !== currentRoom) {
-      // console.warn(`Invalid cursor move: Missing data or wrong room. Room: ${roomId}, Current: ${currentRoom}`);
-      return;
-    }
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      // console.warn(`Invalid cursor move: Room ${roomId} doesn't exist or user ${socket.id} not in it.`);
-      return;
-    }
-
+    if (!roomId || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
     const roomData = rooms.get(roomId);
     const userInfo = roomData.get(socket.id);
-
-    if (!userInfo) {
-      console.warn(`User info not found for ${socket.id} in room ${roomId}`);
-      return;
-    }
-
-    // Update cursor position in server state
+    if (!userInfo) return;
     if (coordinates) userInfo.coordinates = coordinates;
-    roomData.set(socket.id, userInfo); // Update the map entry
-
-    // Broadcast to all other users in the room
+    roomData.set(socket.id, userInfo);
     socket.to(roomId).emit('mouse-update', {
       userId: socket.id,
       username: userInfo.username,
       coordinates: userInfo.coordinates,
       visible,
-      color: userInfo.color, // Include color
+      color: userInfo.color,
     });
   });
 
-  // Handle language changes
   socket.on('languageChange', ({ roomId, userId, language }) => {
-    if (
-      !roomId ||
-      !language ||
-      !userId ||
-      !currentRoom ||
-      roomId !== currentRoom
-    ) {
-      console.log('Invalid language change request:', {
-        roomId,
-        language,
-        userId,
-        currentRoom,
-      });
-      return;
-    }
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(
-        `Invalid language change: Room ${roomId} or user ${socket.id} not found.`,
-      );
-      return;
-    }
-    console.log(
-      `Broadcasting language change in room ${roomId} from user ${userId}: ${language}`,
-    );
-    // Broadcast to all other users in the room
+    if (!roomId || !language || !userId || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
     socket.to(roomId).emit('languageChange', { userId, language });
   });
 
-  // Handle project files tree updates
   socket.on('filesTreeUpdate', ({ roomId, userId, tree }) => {
     if (!roomId || !tree || !currentRoom || roomId !== currentRoom) return;
     if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
     socket.to(roomId).emit('filesTreeUpdate', { userId, tree });
   });
 
-  // Host shares initial files state with a requester
   socket.on('shareFilesState', ({ roomId, requesterId, tree }) => {
     if (!roomId || !requesterId || !currentRoom || roomId !== currentRoom) return;
     if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
@@ -429,322 +336,107 @@ io.on('connection', (socket) => {
     io.to(requesterId).emit('initialFilesState', { tree });
   });
 
-  // Handle code output sharing
   socket.on('codeOutput', ({ roomId, userId, output }) => {
-    if (
-      !roomId ||
-      output === undefined ||
-      !userId ||
-      !currentRoom ||
-      roomId !== currentRoom
-    ) {
-      console.log('Invalid code output request:', {
-        roomId,
-        output,
-        userId,
-        currentRoom,
-      });
-      return;
-    }
+    if (!roomId || output === undefined || !userId || !currentRoom || roomId !== currentRoom) return;
     const roomData = rooms.get(roomId);
-    const userInfo = roomData?.get(userId); // Get user info from the map
-
-    if (!userInfo || !userInfo.username) {
-      console.log(
-        `Could not find user info or username for userId ${userId} in room ${roomId}`,
-      );
-      return; // Don't broadcast if user info or username is missing
-    }
-    console.log(userInfo);
-    console.log(
-      `Broadcasting code output in room ${roomId} from user ${userInfo.username} (${userId})`,
-    );
-    // Broadcast to all other users in the room
-    socket
-      .to(roomId)
-      .emit('codeOutput', { userId, username: userInfo.username, output }); // Include username from map
+    const userInfo = roomData?.get(userId);
+    if (!userInfo?.username) return;
+    socket.to(roomId).emit('codeOutput', { userId, username: userInfo.username, output });
   });
 
-  // Handle chat messages
   socket.on('chatMessage', ({ roomId, message }) => {
-    if (!roomId || !message || !currentRoom || roomId !== currentRoom) {
-      console.log('Invalid chat message request:', {
-        roomId,
-        message,
-        currentRoom,
-      });
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(
-        `Invalid chat message: Room ${roomId} doesn't exist or user ${socket.id} not in it.`,
-      );
-      return;
-    }
-    
-    const roomData = rooms.get(roomId);
-    const userInfo = roomData.get(socket.id);
-    
-    if (!userInfo) {
-      console.log(`User info not found for ${socket.id} in room ${roomId}`);
-      return;
-    }
-    
-    console.log(
-      `Broadcasting chat message in room ${roomId} from user ${userInfo.username}`,
-    );
-    
-    // Create the message object with timestamp
-    const chatMessage = {
+    if (!roomId || !message || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    const userInfo = rooms.get(roomId).get(socket.id);
+    if (!userInfo) return;
+    io.in(roomId).emit('chatMessage', {
       userId: socket.id,
       username: userInfo.username,
       text: message,
       timestamp: new Date().toISOString(),
-      color: userInfo.color
-    };
-    
-    // Broadcast to all users in the room (including sender to maintain message order)
-    io.in(roomId).emit('chatMessage', chatMessage);
+      color: userInfo.color,
+    });
   });
 
-  // WebRTC Audio Chat Signaling Events
-  
-  // Handle WebRTC offer
+  // ── WebRTC audio signaling ────────────────────────────────────────────────
+
   socket.on('webrtc-offer', ({ roomId, targetUserId, offer }) => {
-    if (!roomId || !targetUserId || !offer || !currentRoom || roomId !== currentRoom) {
-      console.log('Invalid WebRTC offer:', { roomId, targetUserId, currentRoom });
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(`Invalid WebRTC offer: User ${socket.id} not in room ${roomId}`);
-      return;
-    }
-    
-    console.log(`WebRTC offer from ${socket.id} to ${targetUserId} in room ${roomId}`);
-    
-    // Forward the offer to the target user
-    io.to(targetUserId).emit('webrtc-offer', {
-      fromUserId: socket.id,
-      offer: offer
-    });
+    if (!roomId || !targetUserId || !offer || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    io.to(targetUserId).emit('webrtc-offer', { fromUserId: socket.id, offer });
   });
-  
-  // Handle WebRTC answer
+
   socket.on('webrtc-answer', ({ roomId, targetUserId, answer }) => {
-    if (!roomId || !targetUserId || !answer || !currentRoom || roomId !== currentRoom) {
-      console.log('Invalid WebRTC answer:', { roomId, targetUserId, currentRoom });
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(`Invalid WebRTC answer: User ${socket.id} not in room ${roomId}`);
-      return;
-    }
-    
-    console.log(`WebRTC answer from ${socket.id} to ${targetUserId} in room ${roomId}`);
-    
-    // Forward the answer to the target user
-    io.to(targetUserId).emit('webrtc-answer', {
-      fromUserId: socket.id,
-      answer: answer
-    });
+    if (!roomId || !targetUserId || !answer || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    io.to(targetUserId).emit('webrtc-answer', { fromUserId: socket.id, answer });
   });
-  
-  // Handle ICE candidates
+
   socket.on('webrtc-ice-candidate', ({ roomId, targetUserId, candidate }) => {
-    if (!roomId || !targetUserId || !candidate || !currentRoom || roomId !== currentRoom) {
-      console.log('Invalid ICE candidate:', { roomId, targetUserId, currentRoom });
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(`Invalid ICE candidate: User ${socket.id} not in room ${roomId}`);
-      return;
-    }
-    
-    // Forward the ICE candidate to the target user
-    io.to(targetUserId).emit('webrtc-ice-candidate', {
-      fromUserId: socket.id,
-      candidate: candidate
-    });
+    if (!roomId || !targetUserId || !candidate || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    io.to(targetUserId).emit('webrtc-ice-candidate', { fromUserId: socket.id, candidate });
   });
-  
-  // Handle audio chat join/leave notifications
+
   socket.on('audio-chat-join', ({ roomId }) => {
-    if (!roomId || !currentRoom || roomId !== currentRoom) {
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      return;
-    }
-    
-    const roomData = rooms.get(roomId);
-    const userInfo = roomData.get(socket.id);
-    
-    if (!userInfo) {
-      return;
-    }
-    
-    console.log(`User ${userInfo.username} joined audio chat in room ${roomId}`);
-    
-    // Notify other users that this user joined audio chat
-    socket.to(roomId).emit('user-joined-audio', {
-      userId: socket.id,
-      username: userInfo.username
-    });
+    if (!roomId || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    const userInfo = rooms.get(roomId).get(socket.id);
+    if (!userInfo) return;
+    socket.to(roomId).emit('user-joined-audio', { userId: socket.id, username: userInfo.username });
   });
-  
+
   socket.on('audio-chat-leave', ({ roomId }) => {
-    if (!roomId || !currentRoom || roomId !== currentRoom) {
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      return;
-    }
-    
-    const roomData = rooms.get(roomId);
-    const userInfo = roomData.get(socket.id);
-    
-    if (!userInfo) {
-      return;
-    }
-    
-    console.log(`User ${userInfo.username} left audio chat in room ${roomId}`);
-    
-    // Notify other users that this user left audio chat
-    socket.to(roomId).emit('user-left-audio', {
-      userId: socket.id,
-      username: userInfo.username
-    });
+    if (!roomId || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    const userInfo = rooms.get(roomId).get(socket.id);
+    if (!userInfo) return;
+    socket.to(roomId).emit('user-left-audio', { userId: socket.id, username: userInfo.username });
   });
 
-  // WebRTC Video Chat Signaling Events
-  
-  // Handle WebRTC video offer
+  // ── WebRTC video signaling ────────────────────────────────────────────────
+
   socket.on('webrtc-video-offer', ({ roomId, targetUserId, offer }) => {
-    if (!roomId || !targetUserId || !offer || !currentRoom || roomId !== currentRoom) {
-      console.log('Invalid WebRTC video offer:', { roomId, targetUserId, currentRoom });
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(`Invalid WebRTC video offer: User ${socket.id} not in room ${roomId}`);
-      return;
-    }
-    
-    console.log(`WebRTC video offer from ${socket.id} to ${targetUserId} in room ${roomId}`);
-    
-    // Forward the offer to the target user
-    io.to(targetUserId).emit('webrtc-video-offer', {
-      fromUserId: socket.id,
-      offer: offer
-    });
-  });
-  
-  // Handle WebRTC video answer
-  socket.on('webrtc-video-answer', ({ roomId, targetUserId, answer }) => {
-    if (!roomId || !targetUserId || !answer || !currentRoom || roomId !== currentRoom) {
-      console.log('Invalid WebRTC video answer:', { roomId, targetUserId, currentRoom });
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(`Invalid WebRTC video answer: User ${socket.id} not in room ${roomId}`);
-      return;
-    }
-    
-    console.log(`WebRTC video answer from ${socket.id} to ${targetUserId} in room ${roomId}`);
-    
-    // Forward the answer to the target user
-    io.to(targetUserId).emit('webrtc-video-answer', {
-      fromUserId: socket.id,
-      answer: answer
-    });
-  });
-  
-  // Handle video ICE candidates
-  socket.on('webrtc-video-ice-candidate', ({ roomId, targetUserId, candidate }) => {
-    if (!roomId || !targetUserId || !candidate || !currentRoom || roomId !== currentRoom) {
-      console.log('Invalid video ICE candidate:', { roomId, targetUserId, currentRoom });
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      console.log(`Invalid video ICE candidate: User ${socket.id} not in room ${roomId}`);
-      return;
-    }
-    
-    // Forward the ICE candidate to the target user
-    io.to(targetUserId).emit('webrtc-video-ice-candidate', {
-      fromUserId: socket.id,
-      candidate: candidate
-    });
-  });
-  
-  // Handle video chat join/leave notifications
-  socket.on('video-chat-join', ({ roomId }) => {
-    if (!roomId || !currentRoom || roomId !== currentRoom) {
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      return;
-    }
-    
-    const roomData = rooms.get(roomId);
-    const userInfo = roomData.get(socket.id);
-    
-    if (!userInfo) {
-      return;
-    }
-    
-    console.log(`User ${userInfo.username} joined video chat in room ${roomId}`);
-    
-    // Notify other users that this user joined video chat
-    socket.to(roomId).emit('user-joined-video', {
-      userId: socket.id,
-      username: userInfo.username
-    });
-  });
-  
-  socket.on('video-chat-leave', ({ roomId }) => {
-    if (!roomId || !currentRoom || roomId !== currentRoom) {
-      return;
-    }
-    
-    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) {
-      return;
-    }
-    
-    const roomData = rooms.get(roomId);
-    const userInfo = roomData.get(socket.id);
-    
-    if (!userInfo) {
-      return;
-    }
-    
-    console.log(`User ${userInfo.username} left video chat in room ${roomId}`);
-    
-    // Notify other users that this user left video chat
-    socket.to(roomId).emit('user-left-video', {
-      userId: socket.id,
-      username: userInfo.username
-    });
+    if (!roomId || !targetUserId || !offer || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    io.to(targetUserId).emit('webrtc-video-offer', { fromUserId: socket.id, offer });
   });
 
-  // ── Room permissions ─────────────────────────────────────────────────────
+  socket.on('webrtc-video-answer', ({ roomId, targetUserId, answer }) => {
+    if (!roomId || !targetUserId || !answer || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    io.to(targetUserId).emit('webrtc-video-answer', { fromUserId: socket.id, answer });
+  });
+
+  socket.on('webrtc-video-ice-candidate', ({ roomId, targetUserId, candidate }) => {
+    if (!roomId || !targetUserId || !candidate || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    io.to(targetUserId).emit('webrtc-video-ice-candidate', { fromUserId: socket.id, candidate });
+  });
+
+  socket.on('video-chat-join', ({ roomId }) => {
+    if (!roomId || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    const userInfo = rooms.get(roomId).get(socket.id);
+    if (!userInfo) return;
+    socket.to(roomId).emit('user-joined-video', { userId: socket.id, username: userInfo.username });
+  });
+
+  socket.on('video-chat-leave', ({ roomId }) => {
+    if (!roomId || !currentRoom || roomId !== currentRoom) return;
+    if (!rooms.has(roomId) || !rooms.get(roomId).has(socket.id)) return;
+    const userInfo = rooms.get(roomId).get(socket.id);
+    if (!userInfo) return;
+    socket.to(roomId).emit('user-left-video', { userId: socket.id, username: userInfo.username });
+  });
+
+  // ── Room permissions ──────────────────────────────────────────────────────
 
   const isHost = () => {
     if (!currentRoom || !rooms.has(currentRoom)) return false;
-    const user = rooms.get(currentRoom).get(socket.id);
-    return user?.host === true;
+    return rooms.get(currentRoom).get(socket.id)?.host === true;
   };
 
-  // Host admits a waiting user from the lobby
   socket.on('admitUser', ({ roomId, userId }) => {
     if (!isHost() || currentRoom !== roomId) return;
     const lobby = lobbies.get(roomId);
@@ -754,161 +446,76 @@ io.on('connection', (socket) => {
     lobby.delete(userId);
 
     const userSocket = io.sockets.sockets.get(userId);
-    if (!userSocket) return; // user disconnected while waiting
+    if (!userSocket) return;
 
     userSocket.join(roomId);
     const fullUser = { ...lobbyUser, cursor: null, host: false, canEdit: false };
     rooms.get(roomId).set(userId, fullUser);
 
     const roomUsers = Array.from(rooms.get(roomId).values());
-
     io.to(userId).emit('admitted', { roomId, users: roomUsers, self: { ...lobbyUser, host: false, canEdit: false } });
     io.in(roomId).emit('userList', roomUsers);
-
-    // Ask host to share state with the new user
     io.to(socket.id).emit('requestInitialState', { requesterId: userId });
     io.to(socket.id).emit('requestFilesState', { requesterId: userId });
-    console.log(`Host admitted ${lobbyUser.username} to room ${roomId}`);
   });
 
-  // Host denies a waiting user
   socket.on('denyUser', ({ roomId, userId }) => {
     if (!isHost() || currentRoom !== roomId) return;
     const lobby = lobbies.get(roomId);
     if (lobby) lobby.delete(userId);
     io.to(userId).emit('joinDenied', { message: 'The host declined your request to join.' });
-    console.log(`Host denied user ${userId} from room ${roomId}`);
   });
 
-  // Host kicks a user (they can attempt to rejoin)
   socket.on('kickUser', ({ roomId, userId }) => {
     if (!isHost() || currentRoom !== roomId || userId === socket.id) return;
     io.to(userId).emit('kicked', { message: 'You were removed from the room by the host.' });
     const userSocket = io.sockets.sockets.get(userId);
     if (userSocket) setTimeout(() => userSocket.disconnect(true), 400);
-    console.log(`Host kicked user ${userId} from room ${roomId}`);
   });
 
-  // Host bans a user (cannot rejoin with same username)
   socket.on('banUser', ({ roomId, userId }) => {
     if (!isHost() || currentRoom !== roomId || userId === socket.id) return;
     const roomData = rooms.get(roomId);
     if (!roomData) return;
     const targetUser = roomData.get(userId);
     if (!targetUser) return;
-
     if (!bannedUsers.has(roomId)) bannedUsers.set(roomId, new Set());
     bannedUsers.get(roomId).add(targetUser.username);
-
     io.to(userId).emit('banned', { message: 'You have been banned from this room.' });
     const userSocket = io.sockets.sockets.get(userId);
     if (userSocket) setTimeout(() => userSocket.disconnect(true), 400);
-    console.log(`Host banned ${targetUser.username} from room ${roomId}`);
   });
 
-  // Host toggles edit permission for a user
   socket.on('setPermission', ({ roomId, userId, canEdit }) => {
     if (!isHost() || currentRoom !== roomId || userId === socket.id) return;
     const roomData = rooms.get(roomId);
     if (!roomData || !roomData.has(userId)) return;
-
-    const targetUser = roomData.get(userId);
-    const updatedUser = { ...targetUser, canEdit: !!canEdit };
+    const updatedUser = { ...roomData.get(userId), canEdit: !!canEdit };
     roomData.set(userId, updatedUser);
-
     io.to(userId).emit('permissionChanged', { canEdit: !!canEdit });
     io.in(roomId).emit('userList', Array.from(roomData.values()));
-    console.log(`Host set canEdit=${canEdit} for user ${targetUser.username} in room ${roomId}`);
   });
 
-  // User requests full state re-sync (e.g. after being given write permission)
   socket.on('requestStateSync', () => {
     if (!currentRoom || !rooms.has(currentRoom)) return;
     const hostUser = Array.from(rooms.get(currentRoom).values()).find((u) => u.host);
-    if (hostUser) {
-      io.to(hostUser.id).emit('requestInitialState', { requesterId: socket.id });
-      console.log(`State sync requested by ${socket.id} in room ${currentRoom} → asking host ${hostUser.id}`);
-    }
+    if (hostUser) io.to(hostUser.id).emit('requestInitialState', { requesterId: socket.id });
   });
 
-  // ── Typing indicator ─────────────────────────────────────────────────────
+  // ── Typing indicator ──────────────────────────────────────────────────────
   socket.on('typing', () => {
     if (!currentRoom || !currentUser) return;
     socket.to(currentRoom).emit('userTyping', { userId: socket.id, username: currentUser.username });
   });
 
-  // ── Embedded Terminal (node-pty) ─────────────────────────────────────────
-
-  socket.on('pty:create', ({ cols = 80, rows = 24 } = {}) => {
-    if (!pty) {
-      socket.emit('pty:error', { message: 'Terminal not available on this server. Install node-pty.' });
-      return;
-    }
-    if (terminalSessions.has(socket.id)) return; // session already running
-
-    try {
-      const ptyProc = pty.spawn(DEFAULT_SHELL, [], {
-        name: 'xterm-256color',
-        cols: Math.max(cols, 10),
-        rows: Math.max(rows, 5),
-        cwd: process.env.HOME || process.cwd(),
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          COLORTERM: 'truecolor',
-          FORCE_COLOR: '1',
-        },
-      });
-
-      terminalSessions.set(socket.id, ptyProc);
-
-      ptyProc.onData((data) => socket.emit('pty:data', { data }));
-      ptyProc.onExit(({ exitCode }) => {
-        terminalSessions.delete(socket.id);
-        socket.emit('pty:exit', { exitCode });
-        console.log(`Terminal exited for ${socket.id} (code ${exitCode})`);
-      });
-
-      console.log(`Terminal created for ${socket.id} (${DEFAULT_SHELL})`);
-    } catch (err) {
-      console.error('PTY spawn failed:', err.message);
-      socket.emit('pty:error', { message: `Failed to start terminal: ${err.message}` });
-    }
-  });
-
-  socket.on('pty:input', ({ data }) => {
-    // Block read-only users from sending terminal input
-    if (currentRoom && rooms.has(currentRoom)) {
-      const user = rooms.get(currentRoom).get(socket.id);
-      if (user && !user.canEdit && !user.host) return;
-    }
-    terminalSessions.get(socket.id)?.write(data);
-  });
-
-  socket.on('pty:resize', ({ cols, rows }) => {
-    const proc = terminalSessions.get(socket.id);
-    if (!proc) return;
-    try { proc.resize(Math.max(cols, 10), Math.max(rows, 5)); } catch { /* ignore */ }
-  });
-
-  socket.on('pty:destroy', () => {
-    const proc = terminalSessions.get(socket.id);
-    if (!proc) return;
-    try { proc.kill(); } catch { /* ignore */ }
-    terminalSessions.delete(socket.id);
-  });
-
-  // Handle disconnection
+  // ── Disconnect ────────────────────────────────────────────────────────────
   socket.on('disconnect', (reason) => {
     console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
 
-    // Clean up from lobby if they were waiting, and notify host
     if (currentRoom && lobbies.has(currentRoom)) {
       const lobby = lobbies.get(currentRoom);
       if (lobby.has(socket.id)) {
         lobby.delete(socket.id);
-        console.log(`Removed ${socket.id} from lobby of room ${currentRoom}`);
-        // Tell host to remove their admission card
         const roomData = rooms.get(currentRoom);
         if (roomData) {
           const hostUser = Array.from(roomData.values()).find((u) => u.host);
@@ -919,67 +526,30 @@ io.on('connection', (socket) => {
 
     if (currentRoom && rooms.has(currentRoom)) {
       const roomData = rooms.get(currentRoom);
-      const leavingUser = roomData.get(socket.id); // Get user info before deleting
+      const leavingUser = roomData.get(socket.id);
 
       if (leavingUser) {
-        // Remove user from room
         roomData.delete(socket.id);
-        console.log(
-          `User ${leavingUser.username} (${socket.id}) removed from room ${currentRoom}`,
-        );
-
-        let updatedRoomUsers = Array.from(roomData.values()); // Get users after removal
+        let updatedRoomUsers = Array.from(roomData.values());
 
         if (leavingUser.host && roomData.size > 0) {
-          // If the leaving user was the host and others remain
           const newHostUser = updatedRoomUsers[0];
           if (newHostUser) {
             const updatedNewHost = { ...newHostUser, host: true, canEdit: true };
             roomData.set(newHostUser.id, updatedNewHost);
             updatedRoomUsers = Array.from(roomData.values());
-            // Tell the promoted client they are now host with full edit rights
             io.to(newHostUser.id).emit('hostTransferred', { newHost: updatedNewHost });
-            console.log(
-              `Transferred host to ${newHostUser.username} (${newHostUser.id}) in room ${currentRoom}`,
-            );
           }
         }
 
-        // Notify remaining users about the departure
-        socket.to(currentRoom).emit('userLeft', {
-          userId: socket.id,
-          username: leavingUser.username,
-        });
+        socket.to(currentRoom).emit('userLeft', { userId: socket.id, username: leavingUser.username });
 
-        // If room is empty, delete it
         if (roomData.size === 0) {
-          console.log(`Deleting empty room: ${currentRoom}`);
           rooms.delete(currentRoom);
         } else {
-          // Broadcast updated user list (potentially with new host)
-          console.log(
-            `Updated room ${currentRoom} users:`,
-            updatedRoomUsers.map(
-              (u) => `${u.username}${u.host ? ' (Host)' : ''}`,
-            ), // Log host status
-          );
-          io.in(currentRoom).emit('userList', updatedRoomUsers); // Send the potentially updated list
+          io.in(currentRoom).emit('userList', updatedRoomUsers);
         }
-      } else {
-        console.log(
-          `User ${socket.id} was in room ${currentRoom} but info not found upon disconnect.`,
-        );
       }
-    } else {
-      console.log(
-        `User ${socket.id} disconnected without being in a tracked room.`,
-      );
-    }
-    // Kill any running PTY session for this socket
-    const ptyOnDisconnect = terminalSessions.get(socket.id);
-    if (ptyOnDisconnect) {
-      try { ptyOnDisconnect.kill(); } catch { /* ignore */ }
-      terminalSessions.delete(socket.id);
     }
 
     currentRoom = null;

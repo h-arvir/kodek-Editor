@@ -1,86 +1,37 @@
-import axios from 'axios';
+// API key lives on the backend (server/index.js). The frontend only calls our own proxy.
+const SERVER_URL = import.meta.env.SERVER_URL || '';
 
-const JUDGE0_API_URL = 'https://judge0-ce.p.rapidapi.com/submissions';
-const RAPIDAPI_KEY = import.meta.env.VITE_RAPIDAPI_KEY;
-const RAPIDAPI_HOST = import.meta.env.VITE_RAPIDAPI_HOST;
-
-// Create an Axios instance for Judge0 API
-const judge0Api = axios.create({
-  baseURL: JUDGE0_API_URL,
-  headers: {
-    'Content-Type': 'application/json', // Use only one Content-Type header
-    'X-RapidAPI-Key': RAPIDAPI_KEY,
-    'X-RapidAPI-Host': RAPIDAPI_HOST,
-  },
-});
-
-const POLLING_INTERVAL_MS = 1500; // Slightly increased polling interval
-const MAX_POLLING_ATTEMPTS = 10; // Limit polling attempts
+const POLLING_INTERVAL_MS = 1500;
+const MAX_POLLING_ATTEMPTS = 10;
 
 /**
- * Makes a request to the code compilation API
+ * Submits code to the backend execution proxy, which forwards it to Judge0.
+ * Polling is handled server-side; this call waits for the final result.
  *
- * @param {string} code - Source code to compile
- * @param {number} languageId - JudgeO API language identifier
- * @returns {Promise<Object>} - Compilation result object with status and output
- * @throws {Error} - If API request fails
+ * @param {string} code - Source code to compile/run
+ * @param {number} languageId - Judge0 language ID
+ * @returns {Promise<Object>} Judge0 result object
  */
 export const compileCode = async (code, languageId) => {
-  const submitOptions = {
-    params: {
-      base64_encoded: 'false',
-      fields: '*',
-    },
-    data: {
-      source_code: code,
-      language_id: languageId,
-      stdin: '',
-    },
-  };
-
   try {
-    // Submit code using the dedicated instance
-    const response = await judge0Api.post('/', submitOptions.data, {
-      params: submitOptions.params,
+    const res = await fetch(`${SERVER_URL}/api/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source_code: code,
+        language_id: languageId,
+        stdin: '',
+      }),
     });
-    const token = response.data.token;
 
-    if (!token) {
-      throw new Error('Submission token not received from API.');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Server error ${res.status}`);
     }
 
-    // Poll for results
-    let result;
-    let attempts = 0;
-    while (attempts < MAX_POLLING_ATTEMPTS) {
-      result = await judge0Api.get(`/${token}`, {
-        params: {
-          base64_encoded: 'false',
-          fields: '*',
-        },
-      });
-
-      // Status IDs: 1 (In Queue), 2 (Processing)
-      if (result.data.status.id <= 2) {
-        attempts++;
-        await new Promise((resolve) =>
-          setTimeout(resolve, POLLING_INTERVAL_MS),
-        );
-      } else {
-        // Finished (Accepted, Wrong Answer, Time Limit Exceeded, etc.) or Error
-        return result.data;
-      }
-    }
-
-    // If loop finishes without result, throw timeout error
-    throw new Error(`Polling timed out after ${attempts} attempts.`);
+    return res.json();
   } catch (error) {
-    console.error('API Request/Compilation Error:', error);
-    // Provide more context in the error message
-    const errorMessage =
-      error.response?.data?.message ||
-      error.message ||
-      'Failed to compile or retrieve result';
-    throw new Error(`Compilation failed: ${errorMessage}`);
+    console.error('Execution request failed:', error);
+    throw new Error(`Compilation failed: ${error.message}`);
   }
 };

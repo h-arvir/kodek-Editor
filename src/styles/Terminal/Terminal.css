@@ -1,4 +1,13 @@
-/* ── Terminal Panel ─────────────────────────────────────────────────────── */
+/* ── ANSI output color variables ─────────────────────────────────────────── */
+
+:root {
+  --out-red:    #ef4444;
+  --out-green:  #10b981;
+  --out-yellow: #f59e0b;
+  --out-cyan:   #22d3ee;
+}
+
+/* ── Terminal / Output Panel ─────────────────────────────────────────────── */
 
 .term-readonly-bar {
   display: flex;
@@ -89,23 +98,36 @@
   background: #0a0a0a;
 }
 
-/* xterm.js container */
-.term-xterm-container {
-  width: 100%;
-  height: 100%;
-  padding: 6px 6px 0;
-  box-sizing: border-box;
+/* Output panel body — scrollable */
+.output-body {
+  overflow-y: auto;
+  padding: 10px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
 }
 
-/* Make xterm fill its container */
-.term-xterm-container .xterm,
-.term-xterm-container .xterm-viewport,
-.term-xterm-container .xterm-screen {
-  width: 100% !important;
-  height: 100% !important;
+.output-body::-webkit-scrollbar       { width: 6px; }
+.output-body::-webkit-scrollbar-track { background: transparent; }
+.output-body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+.output-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
 }
 
-/* Placeholder shown before PTY is ready */
+/* Pre block for output text */
+.output-pre {
+  margin: 0;
+  font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e8e8e8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Placeholder shown when no output yet */
 .term-placeholder {
   position: absolute;
   inset: 0;
@@ -143,7 +165,7 @@
   /* height is controlled by the Resizable component */
 }
 
-/* ── Light theme — keep the terminal body dark ──────────────────────────── */
+/* ── Light theme ─────────────────────────────────────────────────────────── */
 
 .light .term-header {
   background: var(--panel-header);
@@ -157,15 +179,4 @@
 
 .light .term-resize-handle:hover {
   background: #FB9EC6;
-}
-
-/* Fix xterm scrollbar */
-.xterm-viewport::-webkit-scrollbar       { width: 6px; }
-.xterm-viewport::-webkit-scrollbar-track { background: transparent; }
-.xterm-viewport::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.15);
-  border-radius: 3px;
-}
-.xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.3);
 }
