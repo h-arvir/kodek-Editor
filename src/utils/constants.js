@@ -36,7 +36,7 @@ export const LANGUAGE_OPTIONS = {
  * @type {Object}
  */
 export const SOCKET_CONFIG = {
-  serverUrl: import.meta.env.SERVER_URL || 'http://localhost:3001',
+  serverUrl: import.meta.env.VITE_SERVER_URL || 'http://localhost:3001',
   options: {
     timeout: 10000,
     forceNew: true,

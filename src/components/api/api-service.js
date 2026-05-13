@@ -1,5 +1,5 @@
 // API key lives on the backend (server/index.js). The frontend only calls our own proxy.
-const SERVER_URL = import.meta.env.SERVER_URL || '';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || '';
 
 const POLLING_INTERVAL_MS = 1500;
 const MAX_POLLING_ATTEMPTS = 10;
