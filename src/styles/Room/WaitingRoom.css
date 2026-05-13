@@ -1,0 +1,99 @@
+.waiting-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg, #0a0a0a);
+}
+
+.waiting-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2.5rem 3rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  max-width: 420px;
+  width: 90vw;
+  text-align: center;
+}
+
+.dark .waiting-card {
+  background: rgba(15, 15, 15, 0.95);
+  box-shadow: 0 0 60px rgba(155, 93, 229, 0.12);
+}
+
+.light .waiting-card {
+  background: rgba(254, 254, 254, 0.97);
+  box-shadow: 0 0 60px rgba(251, 158, 198, 0.15);
+}
+
+.waiting-logo {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--primary-light);
+  text-shadow: 0 0 18px var(--primary-glow);
+  letter-spacing: -0.5px;
+}
+
+.waiting-spinner {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  animation: waiting-spin 0.9s linear infinite;
+}
+
+@keyframes waiting-spin {
+  to { transform: rotate(360deg); }
+}
+
+.waiting-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.waiting-sub {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: -0.75rem 0 0;
+  line-height: 1.5;
+}
+
+.waiting-room-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.waiting-room-badge strong {
+  color: var(--primary-lighter);
+}
+
+.waiting-cancel {
+  margin-top: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.5rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.waiting-cancel:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}

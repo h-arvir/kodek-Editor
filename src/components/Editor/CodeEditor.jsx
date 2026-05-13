@@ -2,18 +2,20 @@ import Editor, { loader } from '@monaco-editor/react';
 
 import '../../styles/Editor/CodeEditor.css';
 
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { FaFolderTree } from "react-icons/fa6";
 import { motion, AnimatePresence } from 'framer-motion';
 
 import {
-  VscTerminalPowershell,
+  VscTerminal,
   VscFeedback,
   VscCloudDownload,
 } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
-import { BsMic, BsCameraVideo } from 'react-icons/bs';
-
+import { BsCircleHalf } from 'react-icons/bs';
+import { BsMic, BsCameraVideo, BsStars } from 'react-icons/bs';
+import { AIFloatingBar } from '../AI/AIFloatingBar';
+import { CommentThread } from '../Comments/CommentThread';
 
 import NavDock from '../../../reactbits/NavDock';
 import { ChatDock } from '../Chat/ChatDock';
@@ -24,19 +26,33 @@ import { useTheme } from '../../context/theme';
 
 const configureMonacoThemes = (monaco) => {
   monaco.editor.defineTheme('kodek-light-grey', {
-    base: 'vs', // Use VS light as the base
-    inherit: true, // Inherit rules from the base theme
-    rules: [], // No custom token rules
+    base: 'vs',
+    inherit: true,
+    rules: [],
     colors: {
-      // Set the editor background to light grey
       'editor.background': '#f0f0f0',
       'editor.foreground': '#333333',
       'editorLineNumber.foreground': '#666666',
-      'editorCursor.foreground': '#9b5de5', // Primary color for cursor
-      'editor.selectionBackground': 'rgba(155, 93, 229, 0.2)', // Primary color for selection
+      'editorCursor.foreground': '#9b5de5',
+      'editor.selectionBackground': 'rgba(155, 93, 229, 0.2)',
       'editor.inactiveSelectionBackground': 'rgba(155, 93, 229, 0.1)',
-      'editorLineHighlight.background': '#e6f5fd', // Secondary color for line highlight
-      'editor.lineHighlightBorder': '#d0f0fd', // Secondary color for line highlight border
+      'editorLineHighlight.background': '#e6f5fd',
+      'editor.lineHighlightBorder': '#d0f0fd',
+    }
+  });
+  monaco.editor.defineTheme('kodek-mono', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': '#000000',
+      'editor.foreground': '#ffffff',
+      'editorLineNumber.foreground': '#666666',
+      'editorCursor.foreground': '#ffffff',
+      'editor.selectionBackground': 'rgba(255, 255, 255, 0.2)',
+      'editor.inactiveSelectionBackground': 'rgba(255, 255, 255, 0.1)',
+      'editorLineHighlight.background': '#111111',
+      'editor.lineHighlightBorder': '#222222',
     }
   });
 };
@@ -49,7 +65,6 @@ export const CodeEditor = memo(
     handleEditorDidMount,
     isFullScreen,
     toggleFullScreen,
-    toggleOutput,
     runCode,
     isLoading,
     isFileTreeOpen,
@@ -58,36 +73,216 @@ export const CodeEditor = memo(
     tree,
     addFile,
     setTree,
+    isAIPanelOpen,
+    toggleAIPanel,
+    onAIAction,
+    toggleTerminal,
+    onToggleFileSearch,
+    canEdit = true,
+    // ── Line comments ─────────────────────────
+    comments,
+    linesWithComments,
+    onAddComment,
+    onAddReply,
+    onResolveThread,
+    onDeleteThread,
     ...props
   }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [fontSize, setFontSize] = useState(14);
     const [isAudioChatOpen, setIsAudioChatOpen] = useState(false);
     const [isVideoChatOpen, setIsVideoChatOpen] = useState(false);
     const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
-    const [downloadStep, setDownloadStep] = useState('root'); // 'root' | 'import' | 'export'
-    // file tree visibility is controlled by parent via props
+    const [downloadStep, setDownloadStep] = useState('root');
+    const [selectionInfo, setSelectionInfo] = useState(null);
+    const [openThreadLine, setOpenThreadLine] = useState(null);
+    const [threadPos, setThreadPos] = useState(null);
+
+    const editorRef = useRef(null);
+    const monacoRef = useRef(null);
+    const commentDecsRef = useRef([]);
+    const hoverDecsRef = useRef([]);
+    const editorWrapperRef = useRef(null);
+    // Keep a ref so scroll handler always has the latest openThreadLine
+    const openThreadLineRef = useRef(null);
+
     const { unreadCount } = useCollaboration();
-    const { toggleTheme, isDark } = useTheme();
+    const { theme, toggleTheme, isDark } = useTheme();
 
     useEffect(() => {
-      loader.init().then(configureMonacoThemes);
+      loader.init().then((m) => {
+        configureMonacoThemes(m);
+        monacoRef.current = m;
+      });
     }, []);
+
+    useEffect(() => {
+      if (!monacoRef.current) return;
+      if (theme === 'light') monacoRef.current.editor.setTheme('kodek-light-grey');
+      else if (theme === 'mono') monacoRef.current.editor.setTheme('kodek-mono');
+      else monacoRef.current.editor.setTheme('vs-dark');
+    }, [theme]);
+
+    // Compute position for the comment thread panel (fixed coords)
+    const computeThreadPos = (editor, line) => {
+      const dom = editor.getContainerDomNode();
+      if (!dom) return null;
+      const rect = dom.getBoundingClientRect();
+      const linePos = editor.getScrolledVisiblePosition({ lineNumber: line, column: 1 });
+      if (!linePos || linePos.top < 0 || linePos.top > rect.height) return null;
+      const lineHeight = editor.getOption(monacoRef.current?.editor?.EditorOption?.lineHeight ?? 66) || 20;
+      return {
+        top: rect.top + linePos.top + lineHeight,
+        left: rect.left + 72,
+        width: Math.min(460, rect.width - 84),
+      };
+    };
+
+    const openThread = (editor, line) => {
+      openThreadLineRef.current = line;
+      setOpenThreadLine(line);
+      setThreadPos(computeThreadPos(editor, line));
+    };
+
+    const closeThread = () => {
+      openThreadLineRef.current = null;
+      setOpenThreadLine(null);
+      setThreadPos(null);
+    };
 
     const wrappedEditorDidMount = (editor, monaco) => {
       configureMonacoThemes(monaco);
-      if (!isDark) {
-        monaco.editor.setTheme('kodek-light-grey');
-      }
-      if (handleEditorDidMount) {
-        handleEditorDidMount(editor, monaco);
-      }
+      monacoRef.current = monaco;
+      if (theme === 'light') monaco.editor.setTheme('kodek-light-grey');
+      else if (theme === 'mono') monaco.editor.setTheme('kodek-mono');
+      if (handleEditorDidMount) handleEditorDidMount(editor, monaco);
+
+      editorRef.current = editor;
+
+      // ── Font size: Ctrl+= increase, Ctrl+- decrease ──────────────────────
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal, () => {
+        setFontSize((s) => Math.min(s + 1, 26));
+      });
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus, () => {
+        setFontSize((s) => Math.max(s - 1, 10));
+      });
+
+      // ── Ctrl+P → file search ─────────────────────────────────────────────
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
+        if (typeof onToggleFileSearch === 'function') onToggleFileSearch();
+      });
+
+      // ── AI floating bar: selection tracking ──────────────────────────────
+      editor.onDidChangeCursorSelection(() => {
+        const sel = editor.getSelection();
+        if (!sel || sel.isEmpty()) { setSelectionInfo(null); return; }
+        const model = editor.getModel();
+        if (!model) return;
+        const selectedText = model.getValueInRange(sel);
+        if (!selectedText.trim()) { setSelectionInfo(null); return; }
+        const pixelPos = editor.getScrolledVisiblePosition(sel.getStartPosition());
+        if (!pixelPos || pixelPos.top < 0) { setSelectionInfo(null); return; }
+        setSelectionInfo({ text: selectedText, top: pixelPos.top, left: pixelPos.left });
+      });
+
+      editor.onDidBlurEditorWidget(() => {
+        setTimeout(() => setSelectionInfo(null), 150);
+      });
+
+      // ── Line comment: hover indicator in gutter ──────────────────────────
+      let hoveredGutterLine = -1;
+      let rafId = null;
+
+      const updateHoverDec = (line) => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          if (line === hoveredGutterLine) return;
+          hoveredGutterLine = line;
+          hoverDecsRef.current = editor.deltaDecorations(hoverDecsRef.current, line > 0 ? [{
+            range: new monaco.Range(line, 1, line, 1),
+            options: { glyphMarginClassName: 'comment-glyph--hover' },
+          }] : []);
+        });
+      };
+
+      editor.onMouseMove((e) => {
+        const t = e.target.type;
+        if (t === 2 || t === 3) { // GUTTER_GLYPH_MARGIN | GUTTER_LINE_NUMBERS
+          updateHoverDec(e.target.position?.lineNumber ?? -1);
+        } else {
+          updateHoverDec(-1);
+        }
+      });
+
+      editor.onMouseLeave(() => updateHoverDec(-1));
+
+      // ── Line comment: gutter click to open/close thread ──────────────────
+      editor.onMouseDown((e) => {
+        const t = e.target.type;
+        if (t === 2 || t === 3) {
+          const line = e.target.position?.lineNumber;
+          if (!line) return;
+          if (openThreadLineRef.current === line) {
+            closeThread();
+          } else {
+            openThread(editor, line);
+          }
+        }
+      });
+
+      // ── Reposition thread panel on editor scroll ─────────────────────────
+      editor.onDidScrollChange(() => {
+        const line = openThreadLineRef.current;
+        if (!line) return;
+        const pos = computeThreadPos(editor, line);
+        if (pos) {
+          setThreadPos(pos);
+        } else {
+          closeThread();
+        }
+      });
     };
+
+    // Keep Monaco readOnly in sync with canEdit prop — the options prop alone
+    // is not reliable after mount because @monaco-editor/react may skip the update
+    useEffect(() => {
+      if (editorRef.current) {
+        editorRef.current.updateOptions({ readOnly: !canEdit });
+      }
+    }, [canEdit]);
+
+    // Sync Monaco glyph decorations whenever commented lines change
+    useEffect(() => {
+      const editor = editorRef.current;
+      const monaco = monacoRef.current;
+      if (!editor || !monaco) return;
+
+      const decorations = linesWithComments
+        ? [...linesWithComments].map((line) => ({
+            range: new monaco.Range(line, 1, line, 1),
+            options: { glyphMarginClassName: 'comment-glyph--active' },
+          }))
+        : [];
+
+      commentDecsRef.current = editor.deltaDecorations(commentDecsRef.current, decorations);
+    }, [linesWithComments]);
+
+    const handleFloatingBarAction = ({ action, customPrompt }) => {
+      if (typeof onAIAction === 'function') {
+        onAIAction({ action, selectedCode: selectionInfo?.text ?? '', customPrompt });
+      }
+      setSelectionInfo(null);
+    };
+
+    const commentsOnOpenLine = openThreadLine
+      ? (comments ?? []).filter((c) => c.lineNumber === openThreadLine)
+      : [];
 
     const items = [
       {
-        icon: <VscTerminalPowershell size={18} />,
-        label: 'Toggle Output',
-        onClick: toggleOutput,
+        icon: <VscTerminal size={18} />,
+        label: 'Terminal',
+        onClick: () => { if (typeof toggleTerminal === 'function') toggleTerminal(); },
       },
       {
         icon: (
@@ -127,16 +322,31 @@ export const CodeEditor = memo(
         },
       },
       {
-        icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
-        label: isDark ? 'Light Mode' : 'Dark Mode',
+        icon: theme === 'dark' ? <BsCircleHalf size={18} /> : theme === 'mono' ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
+        label: theme === 'dark' ? 'Mono Mode' : theme === 'mono' ? 'Light Mode' : 'Dark Mode',
         onClick: toggleTheme,
+      },
+      {
+        icon: <BsStars size={18} />,
+        label: isAIPanelOpen ? 'Close AI Assistant' : 'AI Assistant',
+        onClick: () => { if (typeof toggleAIPanel === 'function') toggleAIPanel(); },
       },
     ];
 
     return (
       <div className={`panel ${isFullScreen ? 'fullscreen' : ''}`}>
         <div className="panel-header">
-          {!isFullScreen && <span>Kodek Editor</span>}
+          {!isFullScreen && (
+            <span className="panel-header-title">
+              Kodek Editor
+              {selectedFile?.name && (
+                <>
+                  <span className="breadcrumb-sep"> / </span>
+                  <span className="breadcrumb-file">{selectedFile.name}</span>
+                </>
+              )}
+            </span>
+          )}
           {isFullScreen && <span>Fullscreen Mode</span>}
           <motion.button
             className="button-secondary"
@@ -180,10 +390,11 @@ export const CodeEditor = memo(
               </>
             }
           </motion.button>
+
           <motion.button
             className="button"
             onClick={runCode}
-            disabled={isLoading}
+            disabled={isLoading || !canEdit}
             whileTap={{ scale: 0.95 }}
             whileHover={{ scale: 1.03 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
@@ -447,7 +658,12 @@ export const CodeEditor = memo(
               </AnimatePresence>
             </div>
           </div>
-          <div className="editor-wrapper">
+          <div className="editor-wrapper" ref={editorWrapperRef}>
+            <AIFloatingBar
+              visible={!!selectionInfo}
+              position={selectionInfo}
+              onAction={handleFloatingBarAction}
+            />
             <Editor
               wrapperProps={{ ...props }}
               defaultLanguage={language}
@@ -457,12 +673,14 @@ export const CodeEditor = memo(
               theme={isDark ? "vs-dark" : "kodek-light-grey"}
               onMount={wrappedEditorDidMount}
               options={{
-                fontSize: 14,
+                fontSize: fontSize,
+                readOnly: !canEdit,
                 fontFamily: "'Fira Code', 'Consolas', monospace",
                 fontLigatures: true,
                 minimap: { enabled: false },
                 scrollBeyondLastLine: false,
                 lineNumbers: 'on',
+                glyphMargin: true,
                 roundedSelection: true,
                 padding: { top: 16, bottom: 16 },
                 cursorStyle: 'line',
@@ -473,7 +691,6 @@ export const CodeEditor = memo(
                 automaticLayout: true,
                 wordWrap: 'on',
                 renderLineHighlight: 'all',
-                // Set the background color directly in the editor options
                 ...(isDark ? {} : { backgroundColor: '#f0f0f0' }),
                 scrollbar: {
                   verticalScrollbarSize: 8,
@@ -486,6 +703,19 @@ export const CodeEditor = memo(
                 },
               }}
             />
+            {/* Inline comment thread panel — fixed positioning computed from editor coords */}
+            {openThreadLine && threadPos && (
+              <CommentThread
+                lineNumber={openThreadLine}
+                position={threadPos}
+                commentsOnLine={commentsOnOpenLine}
+                onAddComment={onAddComment}
+                onAddReply={onAddReply}
+                onResolveThread={onResolveThread}
+                onDeleteThread={onDeleteThread}
+                onClose={closeThread}
+              />
+            )}
           </div>
         </div>
       </div>

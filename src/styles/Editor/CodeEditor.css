@@ -25,10 +25,7 @@
   border-right: 1px solid var(--border);
 }
 
-.panel:last-child {
-  flex: 1;
-  /* Allow the output panel to handle its own flex behavior for animations */
-}
+/* .output-panel handles its own flex in OutputPanel.css */
 
 .panel.fullscreen {
   position: fixed;
@@ -59,6 +56,37 @@ body.editor-fullscreen .dock-container {
   color: var(--text-secondary);
   letter-spacing: 0.5px;
   z-index: 100; /* Ensure it's above other elements */
+}
+
+.readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  user-select: none;
+}
+
+.panel-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.breadcrumb-sep {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin: 0 4px;
+}
+
+.breadcrumb-file {
+  color: var(--primary-lighter);
+  font-weight: 600;
 }
 
 /* Make editor take full width when in fullscreen mode */
@@ -97,6 +125,24 @@ body.editor-fullscreen .dock-container {
 /* Selection color in light mode */
 .light .monaco-editor .selected-text {
   background-color: rgba(255, 232, 147, 0.4) !important; /* FFE893 selection */
+}
+
+/* Mono mode Monaco editor overrides */
+.mono .monaco-editor .monaco-editor-background,
+.mono .monaco-editor .margin-view-overlays,
+.mono .monaco-editor .margin {
+  background-color: #000000 !important;
+}
+.mono .monaco-editor .cursor {
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: none !important;
+}
+.mono .monaco-editor .line-numbers {
+  color: #555555 !important;
+}
+.mono .monaco-editor .selected-text {
+  background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Rest of editor styles */

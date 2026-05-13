@@ -56,9 +56,12 @@
 .current-user-badge {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
   border-radius: 8px;
   padding: 0.4rem 0.8rem;
-  min-width: 120px;
+  min-width: 100px;
+  min-height: 48px;
   border: 1px solid var(--border);
   transition: all 0.3s ease;
 }
@@ -143,5 +146,170 @@
   text-shadow: 0 0 4px rgba(251, 158, 198, 0.4); /* FB9EC6 text shadow */
   color: rgba(251, 158, 198, 1); /* FB9EC6 text color */
 }
+
+/* Current user name + read-only row */
+.current-user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.current-user-readonly-pill {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-radius: 4px;
+  padding: 1px 4px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* Avatar stack */
+.avatar-stack {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.user-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  /* background + border + color set via inline style (hollow look) */
+  cursor: default;
+  flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+.user-avatar:hover { transform: scale(1.15); }
+
+/* Crown sits flush on top of avatar circle (positioned inside .user-avatar) */
+.avatar-crown {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+/* Avatar wrapper — padding-top makes room so crown doesn't get clipped */
+.user-avatar-wrap {
+  position: relative;
+  padding-top: 11px;
+}
+
+/* Host can click other avatars */
+.user-avatar--host-ctrl {
+  cursor: pointer;
+  outline: 2px solid transparent;
+  transition: transform 0.15s, outline-color 0.15s;
+}
+.user-avatar--host-ctrl:hover {
+  outline-color: var(--primary);
+  transform: scale(1.18);
+}
+
+/* Read-only indicator dot on avatar */
+.avatar-readonly-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 1.5px solid var(--bg, #0a0a0a);
+}
+
+/* Host controls popover */
+.host-controls-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  width: 172px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+
+.dark .host-controls-popover {
+  background: #131313;
+}
+.light .host-controls-popover {
+  background: #fefefe;
+  border-color: rgba(251,158,198,0.35);
+  box-shadow: 0 12px 40px rgba(251,158,198,0.15);
+}
+
+.host-controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.host-controls-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.host-controls-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.host-controls-close:hover { color: var(--text); }
+
+.host-controls-actions {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 2px;
+}
+
+.host-ctrl-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.78rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s;
+}
+.host-ctrl-btn:hover { background: var(--primary-transparent, rgba(155,93,229,0.12)); }
+.host-ctrl-btn--warn { color: #f59e0b; }
+.host-ctrl-btn--warn:hover { background: rgba(245,158,11,0.1); }
+.host-ctrl-btn--danger { color: #ef4444; }
+.host-ctrl-btn--danger:hover { background: rgba(239,68,68,0.1); }
 
 /* Rest of header styles */

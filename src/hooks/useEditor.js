@@ -13,7 +13,6 @@ export function useEditor({ initialCode }) {
   const [editorInstance, setEditorInstance] = useState(null);
   const [code, setCode] = useState(initialCode);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isOutputVisible, setIsOutputVisible] = useState(true);
   const monacoRef = useRef(null);
   const decorationsCollectionRef = useRef(null);
   
@@ -115,40 +114,32 @@ export function useEditor({ initialCode }) {
     });
   };
 
-  /**
-   * Toggle output panel visibility
-   */
-  const toggleOutput = () => setIsOutputVisible((prev) => !prev);
-
   // Listen for remote code changes
   useEffect(() => {
     if (!editorInstance) return;
 
     const handleRemoteCodeChange = (event) => {
-      const monaco = monacoRef.current;
-
-      isRemoteUpdateRef.current = true;
+      const model = editorInstance.getModel();
+      if (!model) return;
 
       const changes = event.detail.changes;
 
-      for (const change of changes) {
-        console.log(
-          change,
-          new monaco.Range(
-            change.range.endColumn + 1,
-            change.range.endLineNumber + 1,
-            change.range.startColumn,
-            change.range.startLineNumber,
-          ),
-        );
-        editorInstance.executeEdits('code-change', [
-          {
-            forceMoveMarkers: true,
-            range: change.range,
-            text: change.text,
-          },
-        ]);
-      }
+      isRemoteUpdateRef.current = true;
+
+      // model.applyEdits bypasses Monaco's readOnly enforcement so that
+      // read-only collaborators still receive and display remote edits.
+      model.applyEdits(
+        changes.map((change) => ({
+          range: change.range,
+          text: change.text,
+          forceMoveMarkers: true,
+        }))
+      );
+
+      isRemoteUpdateRef.current = false;
+
+      // Keep local code state in sync (onDidChangeModelContent is suppressed above)
+      setCode(editorInstance.getValue());
     };
 
     window.addEventListener('remoteCodeChange', handleRemoteCodeChange);
@@ -276,12 +267,10 @@ export function useEditor({ initialCode }) {
   return {
     code,
     isFullScreen,
-    isOutputVisible,
     editorInstance,
     isRemoteUpdateRef,
     handleEditorDidMount,
     handleCodeChange,
     toggleFullScreen,
-    toggleOutput,
   };
 }

@@ -78,6 +78,15 @@ export function CollaborationProvider({ children }) {
   const [chatMessages, setChatMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Typing indicators: { [userId]: username }
+  const [typingUsers, setTypingUsers] = useState({});
+  const typingTimeoutsRef = useRef({});
+
+  // Room permissions state
+  const [isWaiting, setIsWaiting] = useState(false); // true when in lobby
+  const [canEdit, setCanEdit] = useState(true);       // false = read-only
+  const [joinRequests, setJoinRequests] = useState([]); // pending admit requests (host only)
+
   // Ref to store initial state received from host
   const initialStateRef = useRef(null);
 
@@ -241,6 +250,22 @@ export function CollaborationProvider({ children }) {
     setUnreadCount(0);
   };
 
+  /**
+   * Emit a typing event to room members
+   */
+  const sendTyping = () => {
+    if (joinedRoom && roomId && isConnected) {
+      socket.emit('typing');
+    }
+  };
+
+  const admitUser  = (userId) => socket.emit('admitUser',     { roomId, userId });
+  const denyUser   = (userId) => socket.emit('denyUser',      { roomId, userId });
+  const kickUser   = (userId) => socket.emit('kickUser',      { roomId, userId });
+  const banUser    = (userId) => socket.emit('banUser',       { roomId, userId });
+  const setPermission = (userId, canEditValue) =>
+    socket.emit('setPermission', { roomId, userId, canEdit: canEditValue });
+
   useEffect(() => {
     if (!selfInfo) return;
 
@@ -286,16 +311,87 @@ export function CollaborationProvider({ children }) {
       }
     };
 
+    const handleUserTyping = ({ userId, username: typingName }) => {
+      setTypingUsers((prev) => ({ ...prev, [userId]: typingName }));
+      clearTimeout(typingTimeoutsRef.current[userId]);
+      typingTimeoutsRef.current[userId] = setTimeout(() => {
+        setTypingUsers((prev) => {
+          const { [userId]: _, ...rest } = prev;
+          return rest;
+        });
+      }, 2500);
+    };
+
+    // ── Room permission events ──────────────────────────────────────────────
+    const handleJoinRequest = ({ userId, username: reqUsername, color }) => {
+      setJoinRequests((prev) => {
+        if (prev.some((r) => r.userId === userId)) return prev;
+        return [...prev, { userId, username: reqUsername, color }];
+      });
+    };
+
+    const handleJoinRequestCancelled = ({ userId }) => {
+      setJoinRequests((prev) => prev.filter((r) => r.userId !== userId));
+    };
+
+    const handlePermissionChanged = ({ canEdit: nextCanEdit }) => {
+      setCanEdit(nextCanEdit);
+      setSelfInfo((prev) => prev ? { ...prev, canEdit: nextCanEdit } : prev);
+      if (nextCanEdit) {
+        // Pull the host's current code so any changes missed while read-only are applied
+        socket.emit('requestStateSync');
+      }
+    };
+
+    // Host transferred (server sends updated userList — selfInfo check tells us)
+    const handleKicked = () => {
+      setJoinedRoom(false);
+      setSelfInfo(null);
+      setActiveUsers([]);
+      setUserCursors({});
+      setIsWaiting(false);
+      window.dispatchEvent(new CustomEvent('session:kicked'));
+    };
+
+    const handleBanned = () => {
+      setJoinedRoom(false);
+      setSelfInfo(null);
+      setActiveUsers([]);
+      setUserCursors({});
+      setIsWaiting(false);
+      window.dispatchEvent(new CustomEvent('session:banned'));
+    };
+
+    // Server sends this only to the user being promoted to host
+    const handleHostTransferred = ({ newHost }) => {
+      setSelfInfo((prev) => prev ? { ...prev, host: true, canEdit: true } : newHost);
+      setCanEdit(true);
+    };
+
     socket.on('codeChange', handleRemoteCodeChange);
     socket.on('languageChange', handleRemoteLanguageChange);
     socket.on('codeOutput', handleRemoteCodeOutput);
     socket.on('chatMessage', handleChatMessage);
+    socket.on('userTyping', handleUserTyping);
+    socket.on('joinRequest', handleJoinRequest);
+    socket.on('joinRequestCancelled', handleJoinRequestCancelled);
+    socket.on('permissionChanged', handlePermissionChanged);
+    socket.on('kicked', handleKicked);
+    socket.on('banned', handleBanned);
+    socket.on('hostTransferred', handleHostTransferred);
 
     return () => {
       socket.off('codeChange', handleRemoteCodeChange);
       socket.off('languageChange', handleRemoteLanguageChange);
       socket.off('codeOutput', handleRemoteCodeOutput);
       socket.off('chatMessage', handleChatMessage);
+      socket.off('userTyping', handleUserTyping);
+      socket.off('joinRequest', handleJoinRequest);
+      socket.off('joinRequestCancelled', handleJoinRequestCancelled);
+      socket.off('permissionChanged', handlePermissionChanged);
+      socket.off('kicked', handleKicked);
+      socket.off('banned', handleBanned);
+      socket.off('hostTransferred', handleHostTransferred);
     };
   }, [selfInfo]);
 
@@ -326,15 +422,43 @@ export function CollaborationProvider({ children }) {
       setJoinedRoom(false);
     };
 
-    // Room join confirmation
+    // Room join confirmation (host / first user)
     const onRoomJoined = ({ roomId: joinedRoomId, users, self }) => {
       console.log(`Successfully joined room ${joinedRoomId}`);
       setJoinedRoom(true);
+      setIsWaiting(false);
+      setCanEdit(self?.canEdit !== false);
       setRoomId(joinedRoomId);
       setActiveUsers(users);
       setSelfInfo(self);
       setConnectionError(null);
       setUsernameError(false);
+    };
+
+    // Sent to a non-host user while they wait for approval
+    const onWaitingForHost = ({ roomId: waitingRoomId }) => {
+      console.log(`Waiting for host in room ${waitingRoomId}`);
+      setIsWaiting(true);
+      setConnectionError(null);
+    };
+
+    // Host admitted this user
+    const onAdmitted = ({ roomId: admittedRoomId, users, self }) => {
+      console.log(`Admitted to room ${admittedRoomId}`);
+      setIsWaiting(false);
+      setJoinedRoom(true);
+      setCanEdit(self?.canEdit !== false);
+      setRoomId(admittedRoomId);
+      setActiveUsers(users);
+      setSelfInfo(self);
+      setConnectionError(null);
+    };
+
+    // Host denied this user
+    const onJoinDenied = ({ message }) => {
+      console.log('Join denied:', message);
+      setIsWaiting(false);
+      setConnectionError(message);
     };
 
     // Error handling
@@ -371,14 +495,14 @@ export function CollaborationProvider({ children }) {
     // Files state request handled in useProjectFiles via socket.on('requestFilesState')
 
     // Initial state handler (from server to new user)
-    const handleInitialState = ({ code, language, output }) => {
+    const handleInitialState = ({ code, language, output, comments }) => {
       console.log('Received initial state from host:', {
         code: code ? '[code present]' : '[no code]',
         language,
         output: output ? '[output present]' : '[no output]',
+        comments: comments?.length ?? 0,
       });
-      initialStateRef.current = { code, language, output };
-      // Dispatch event so App/hooks can react
+      initialStateRef.current = { code, language, output, comments: comments ?? [] };
       window.dispatchEvent(new CustomEvent('initialStateReceived'));
     };
 
@@ -405,6 +529,9 @@ export function CollaborationProvider({ children }) {
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
     socket.on('roomJoined', onRoomJoined);
+    socket.on('waitingForHost', onWaitingForHost);
+    socket.on('admitted', onAdmitted);
+    socket.on('joinDenied', onJoinDenied);
     socket.on('error', onError);
     socket.on('userList', handleUserList);
     socket.on('requestInitialState', handleRequestInitialState);
@@ -418,6 +545,9 @@ export function CollaborationProvider({ children }) {
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);
       socket.off('roomJoined', onRoomJoined);
+      socket.off('waitingForHost', onWaitingForHost);
+      socket.off('admitted', onAdmitted);
+      socket.off('joinDenied', onJoinDenied);
       socket.off('error', onError);
       socket.off('userList', handleUserList);
       socket.off('requestInitialState', handleRequestInitialState);
@@ -465,6 +595,18 @@ export function CollaborationProvider({ children }) {
     sendChatMessage,
     unreadCount,
     markChatAsRead,
+    typingUsers,
+    sendTyping,
+    // Room permissions
+    isWaiting,
+    canEdit,
+    joinRequests,
+    setJoinRequests,
+    admitUser,
+    denyUser,
+    kickUser,
+    banUser,
+    setPermission,
   };
 
   return (

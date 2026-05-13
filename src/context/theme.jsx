@@ -2,49 +2,45 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-// Create theme context
+const THEME_CYCLE = ['dark', 'mono', 'light'];
+
 const ThemeContext = createContext({
   theme: 'dark',
   toggleTheme: () => {},
   isDark: true,
+  isMono: false,
 });
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState('dark');
-  
-  // Check for saved theme or system preference on mount
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('kodek-theme');
-    if (savedTheme) {
+    if (savedTheme && THEME_CYCLE.includes(savedTheme)) {
       setTheme(savedTheme);
     } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
       setTheme('light');
     }
   }, []);
 
-  // Update HTML class and localStorage when theme changes
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.remove('dark', 'light', 'mono');
+    document.documentElement.classList.add(theme);
     localStorage.setItem('kodek-theme', theme);
   }, [theme]);
 
-  // Toggle theme function
   const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
+    setTheme(prev => {
+      const idx = THEME_CYCLE.indexOf(prev);
+      return THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
+    });
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark', isMono: theme === 'mono' }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
-// Custom hook to use theme
 export const useTheme = () => useContext(ThemeContext); 

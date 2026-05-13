@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Resizable } from 're-resizable';
 
 import './styles/common/variables.css';
 import './styles/common/buttons.css';
@@ -9,14 +10,20 @@ import { RemoteCursors, useMouseProps } from '@/components/ui/remote-cursors';
 
 import { JoinRoom } from './components/Auth/JoinRoom';
 import { CodeEditor } from './components/Editor/CodeEditor';
-import { OutputPanel } from './components/Editor/OutputPanel';
 import { Header } from './components/Layout/Header';
+import { AIPanel } from './components/AI/AIPanel';
 import { useCollaboration } from './context/collabration';
 import { ThemeProvider } from './context/theme';
 import { useCodeExecution } from './hooks/useCodeExecution';
 import { useEditor } from './hooks/useEditor';
 import { useProjectFiles } from './hooks/useProjectFiles';
+import { useAIAssistant } from './hooks/useAIAssistant';
+import { useLineComments } from './hooks/useLineComments';
 import { FileTreePanel } from './components/filetree/FileTreePanel';
+import { EmbeddedTerminal } from './components/Terminal/EmbeddedTerminal';
+import { FileSearchModal } from './components/Editor/FileSearchModal';
+import { WaitingRoom } from './components/Room/WaitingRoom';
+import { AdmissionPopup } from './components/Room/AdmissionPopup';
 import { LANGUAGE_OPTIONS } from './utils/constants';
 
 /**
@@ -25,6 +32,11 @@ import { LANGUAGE_OPTIONS } from './utils/constants';
 function App() {
   const [language, setLanguage] = useState('javascript');
   const [isFileTreeOpen, setIsFileTreeOpen] = useState(false);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const [aiSelectedCode, setAiSelectedCode] = useState('');
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [hasOpenedTerminal, setHasOpenedTerminal] = useState(false);
+  const [isFileSearchOpen, setIsFileSearchOpen] = useState(false);
 
   // Initialize collaboration features
   const {
@@ -42,18 +54,26 @@ function App() {
     handleLanguageChange: propagateLanguageChange,
     shareInitialState,
     initialStateRef,
+    // Room permissions
+    isWaiting,
+    canEdit,
+    joinRequests,
+    setJoinRequests,
+    admitUser,
+    denyUser,
+    kickUser,
+    banUser,
+    setPermission,
   } = useCollaboration();
 
   // Initialize editor hook
   const {
     code,
     isFullScreen,
-    isOutputVisible,
     handleEditorDidMount,
-    handleCodeChange, // Use this to set initial code
+    handleCodeChange,
     editorInstance,
     toggleFullScreen,
-    toggleOutput,
   } = useEditor({
     initialCode: LANGUAGE_OPTIONS[language].defaultCode,
   });
@@ -80,19 +100,143 @@ function App() {
     setIsFileTreeOpen(prev => !prev);
   }, []);
 
+  // Terminal ref — callback form so we can flush queued writes on mount
+  const terminalRef           = useRef(null);
+  const pendingTerminalWrites = useRef([]);
+
+  const terminalCallbackRef = useCallback((instance) => {
+    terminalRef.current = instance;
+    if (instance && pendingTerminalWrites.current.length > 0) {
+      pendingTerminalWrites.current.forEach((t) => instance.write(t));
+      pendingTerminalWrites.current = [];
+    }
+  }, []);
+
+  // Called by useCodeExecution whenever new output is ready
+  const onNewOutput = useCallback((text) => {
+    setIsTerminalOpen(true);
+    setHasOpenedTerminal(true);
+    if (terminalRef.current) {
+      terminalRef.current.write(text);
+    } else {
+      pendingTerminalWrites.current.push(text);
+    }
+  }, []);
+
   // Initialize code execution
   const {
     output,
-    setOutput, // Corrected setter name
+    setOutput,
     isLoading,
     runCode,
-    clearOutput,
-  } = useCodeExecution();
+  } = useCodeExecution({ onNewOutput });
+
+  // AI Assistant
+  const {
+    settings: aiSettings,
+    updateSettings: updateAISettings,
+    response: aiResponse,
+    isStreaming: aiIsStreaming,
+    error: aiError,
+    sendMessage: aiSendMessage,
+    stopStreaming: aiStop,
+    clearResponse: aiClearResponse,
+  } = useAIAssistant();
+
+  const toggleAIPanel = useCallback(() => setIsAIPanelOpen((v) => !v), []);
+
+  const toggleTerminal = useCallback(() => {
+    setIsTerminalOpen((prev) => {
+      const next = !prev;
+      if (next) setHasOpenedTerminal(true);
+      return next;
+    });
+  }, []);
+
+  const onToggleFileSearch = useCallback(() => setIsFileSearchOpen((v) => !v), []);
+
+  // Line comments
+  const {
+    comments,
+    setComments,
+    linesWithComments,
+    addComment,
+    addReply,
+    resolveThread,
+    deleteThread,
+  } = useLineComments();
+
+  const handleAIAction = useCallback(
+    ({ action, selectedCode, customPrompt }) => {
+      setAiSelectedCode(selectedCode || '');
+      setIsAIPanelOpen(true);
+      aiSendMessage({
+        action,
+        selectedCode: selectedCode || '',
+        fullCode: editorInstance?.getValue() ?? code,
+        language,
+        customPrompt: customPrompt || '',
+      });
+    },
+    [aiSendMessage, editorInstance, code, language],
+  );
+
+  const replaceSelection = useCallback(
+    (newCode) => {
+      if (!editorInstance) return;
+      const sel = editorInstance.getSelection();
+      if (!sel) return;
+      editorInstance.executeEdits('ai-replace', [{ range: sel, text: newCode }]);
+      editorInstance.focus();
+    },
+    [editorInstance],
+  );
+
+  const insertBelow = useCallback(
+    (newCode) => {
+      if (!editorInstance) return;
+      const pos = editorInstance.getPosition();
+      if (!pos) return;
+      const line = editorInstance.getModel().getLineCount();
+      const insertLine = Math.min(pos.lineNumber + 1, line + 1);
+      editorInstance.executeEdits('ai-insert', [
+        {
+          range: {
+            startLineNumber: insertLine,
+            startColumn: 1,
+            endLineNumber: insertLine,
+            endColumn: 1,
+          },
+          text: '\n' + newCode,
+        },
+      ]);
+      editorInstance.focus();
+    },
+    [editorInstance],
+  );
 
   // Keep track of the current code in a ref
   useEffect(() => {
     currentCodeRef.current = code;
   }, [code]);
+
+  // Show an alert and reload when kicked or banned
+  useEffect(() => {
+    const onKicked = () => {
+      alert('You were removed from the room by the host.');
+      window.location.reload();
+    };
+    const onBanned = () => {
+      alert('You have been banned from this room.');
+      window.location.reload();
+    };
+    window.addEventListener('session:kicked', onKicked);
+    window.addEventListener('session:banned', onBanned);
+    return () => {
+      window.removeEventListener('session:kicked', onKicked);
+      window.removeEventListener('session:banned', onBanned);
+    };
+  }, []);
 
   // Handle local language changes and propagate
   const handleLocalLanguageChange = useCallback(
@@ -126,18 +270,28 @@ function App() {
     [handleCodeChange, selectedFileId, setFileContent],
   );
 
+  // Flag to skip the persistence effect immediately after switching files,
+  // preventing stale code from the previous file overwriting the new file's content.
+  const fileJustSwitchedRef = useRef(false);
+
   // When a file is selected, load its content into the editor
   useEffect(() => {
     if (selectedFile && selectedFile.content !== undefined) {
+      fileJustSwitchedRef.current = true;
       handleCodeChange(selectedFile.content);
     }
   }, [selectedFileId]);
 
-  // Persist any editor changes (including remote) into the selected file
+  // Persist any editor changes (including remote) into the selected file.
+  // Skip the first run after a file switch — at that point `code` still holds
+  // the previous file's content and would corrupt the newly selected file.
   useEffect(() => {
-    if (selectedFileId) {
-      setFileContent(selectedFileId, code);
+    if (!selectedFileId) return;
+    if (fileJustSwitchedRef.current) {
+      fileJustSwitchedRef.current = false;
+      return;
     }
+    setFileContent(selectedFileId, code);
   }, [code, selectedFileId, setFileContent]);
 
   // Listen for remote language changes
@@ -184,6 +338,7 @@ function App() {
         code: currentCode,
         language: currentLanguage,
         output: currentOutput,
+        comments,
       });
     };
 
@@ -221,12 +376,19 @@ function App() {
           setLanguage(initialLanguage); // Update local language state
         }
 
-        // Apply output
+        // Apply output — sync state for collab and write to terminal
         if (initialOutput !== null && initialOutput !== undefined) {
-          setOutput(initialOutput); // Update local output state
+          setOutput(initialOutput);
+          onNewOutput(initialOutput);
         }
 
-        initialStateRef.current = null; // Clear the ref after applying
+        // Apply comments from host
+        const { comments: initialComments } = initialStateRef.current;
+        if (Array.isArray(initialComments) && initialComments.length > 0) {
+          setComments(initialComments);
+        }
+
+        initialStateRef.current = null;
       }
     };
 
@@ -239,20 +401,30 @@ function App() {
       window.removeEventListener('initialStateReceived', applyInitialState);
   }, [editorInstance, initialStateRef, handleCodeChange, setOutput]); // Add dependencies
 
-  // Render join room form if not connected
+  // Render join room form or waiting room if not yet in session
   if (!joinedRoom || !selfInfo) {
     return (
       <ThemeProvider>
-        <JoinRoom
-          username={username}
-          setUsername={setUsername}
-          roomId={roomId}
-          setRoomId={setRoomId}
-          joinRoom={joinRoom}
-          connectionError={connectionError}
-          usernameError={usernameError}
-          isConnected={isConnected}
-        />
+        {isWaiting ? (
+          <WaitingRoom
+            roomId={roomId}
+            onCancel={() => {
+              // Disconnect from waiting — server will clean up the lobby entry
+              window.location.reload();
+            }}
+          />
+        ) : (
+          <JoinRoom
+            username={username}
+            setUsername={setUsername}
+            roomId={roomId}
+            setRoomId={setRoomId}
+            joinRoom={joinRoom}
+            connectionError={connectionError}
+            usernameError={usernameError}
+            isConnected={isConnected}
+          />
+        )}
       </ThemeProvider>
     );
   }
@@ -265,60 +437,127 @@ function App() {
         {!isFullScreen && (
           <Header
             language={language}
-            setLanguage={handleLocalLanguageChange} // Use the new handler
+            setLanguage={handleLocalLanguageChange}
             languageOptions={LANGUAGE_OPTIONS}
             roomId={roomId}
             username={selfInfo.username}
             activeUsers={activeUsers}
+            selfInfo={selfInfo}
+            onSetPermission={setPermission}
+            onKick={kickUser}
+            onBan={banUser}
           />
         )}
 
         <main className={`main-content ${isFullScreen ? 'fullscreen-content' : ''}`}>
-          <div className="editor-container" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-            {!isFullScreen && (
-              <div style={{ width: isFileTreeOpen ? 280 : 0, minWidth: isFileTreeOpen ? 220 : 0, maxWidth: isFileTreeOpen ? 360 : 0, overflow: 'hidden', transition: 'all 0.25s ease' }}>
-                {isFileTreeOpen && (
-                  <FileTreePanel
+          <div className="editor-area">
+            <div className="editor-container" style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+              {!isFullScreen && (
+                <div style={{ width: isFileTreeOpen ? 280 : 0, minWidth: isFileTreeOpen ? 220 : 0, maxWidth: isFileTreeOpen ? 360 : 0, overflow: 'hidden', transition: 'all 0.25s ease' }}>
+                  {isFileTreeOpen && (
+                    <FileTreePanel
+                      tree={tree}
+                      selectedId={selectedFileId}
+                      onSelect={selectFile}
+                      onAddFile={addFile}
+                      onAddFolder={addFolder}
+                      onRename={renameItem}
+                      onDelete={deleteItem}
+                    />
+                  )}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'stretch', gap: 12 }}>
+                <RemoteCursors>
+                  <CodeEditor
+                    language={language}
+                    code={code}
+                    handleCodeChange={onEditorChange}
+                    handleEditorDidMount={handleEditorDidMount}
+                    isFullScreen={isFullScreen}
+                    toggleFullScreen={toggleFullScreen}
+                    toggleTerminal={toggleTerminal}
+                    runCode={executeCode}
+                    isLoading={isLoading}
+                    isFileTreeOpen={isFileTreeOpen}
+                    toggleFileTree={toggleFileTree}
+                    selectedFile={selectedFile}
                     tree={tree}
-                    selectedId={selectedFileId}
-                    onSelect={selectFile}
-                    onAddFile={addFile}
-                    onAddFolder={addFolder}
-                    onRename={renameItem}
-                    onDelete={deleteItem}
+                    addFile={addFile}
+                    setTree={setTree}
+                    isAIPanelOpen={isAIPanelOpen}
+                    toggleAIPanel={toggleAIPanel}
+                    onAIAction={handleAIAction}
+                    onToggleFileSearch={onToggleFileSearch}
+                    canEdit={canEdit}
+                    comments={comments}
+                    linesWithComments={linesWithComments}
+                    onAddComment={addComment}
+                    onAddReply={addReply}
+                    onResolveThread={resolveThread}
+                    onDeleteThread={deleteThread}
+                    {...mouseMoveProps}
                   />
-                )}
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'stretch', gap: 12 }}>
-              <RemoteCursors>
-                <CodeEditor
+                </RemoteCursors>
+                <AIPanel
+                  isOpen={isAIPanelOpen}
+                  onClose={() => setIsAIPanelOpen(false)}
+                  response={aiResponse}
+                  isStreaming={aiIsStreaming}
+                  error={aiError}
+                  onSendMessage={(args) =>
+                    aiSendMessage({
+                      ...args,
+                      selectedCode: aiSelectedCode,
+                      fullCode: editorInstance?.getValue() ?? code,
+                      language,
+                    })
+                  }
+                  onStop={aiStop}
+                  onClear={aiClearResponse}
+                  settings={aiSettings}
+                  onUpdateSettings={updateAISettings}
+                  selectedCode={aiSelectedCode}
                   language={language}
-                  code={code}
-                  handleCodeChange={onEditorChange}
-                  handleEditorDidMount={handleEditorDidMount}
-                  isFullScreen={isFullScreen}
-                  toggleFullScreen={toggleFullScreen}
-                  toggleOutput={toggleOutput}
-                  runCode={executeCode}
-                  isLoading={isLoading}
-                  isFileTreeOpen={isFileTreeOpen}
-                  toggleFileTree={toggleFileTree}
-                  selectedFile={selectedFile}
-                  tree={tree}
-                  addFile={addFile}
-                  setTree={setTree}
-                  {...mouseMoveProps}
+                  onReplaceSelection={replaceSelection}
+                  onInsertBelow={insertBelow}
                 />
-                <OutputPanel
-                  isFullScreen={isFullScreen}
-                  isOutputVisible={isOutputVisible}
-                  output={output}
-                  clearOutput={clearOutput}
-                />
-              </RemoteCursors>
+              </div>
             </div>
           </div>
+
+          <FileSearchModal
+            isOpen={isFileSearchOpen}
+            onClose={() => setIsFileSearchOpen(false)}
+            tree={tree}
+            onSelect={selectFile}
+          />
+
+          <AdmissionPopup
+            requests={joinRequests}
+            onAdmit={(userId) => {
+              admitUser(userId);
+              setJoinRequests((prev) => prev.filter((r) => r.userId !== userId));
+            }}
+            onDeny={(userId) => {
+              denyUser(userId);
+              setJoinRequests((prev) => prev.filter((r) => r.userId !== userId));
+            }}
+          />
+
+          {hasOpenedTerminal && (
+            <div className="terminal-section" style={{ display: isTerminalOpen ? 'flex' : 'none' }}>
+              <Resizable
+                defaultSize={{ width: '100%', height: 240 }}
+                minHeight={120}
+                maxHeight={600}
+                enable={{ top: true, right: false, bottom: false, left: false, topRight: false, bottomRight: false, bottomLeft: false, topLeft: false }}
+                handleClasses={{ top: 'term-resize-handle' }}
+              >
+                <EmbeddedTerminal ref={terminalCallbackRef} isVisible={isTerminalOpen} onClose={toggleTerminal} />
+              </Resizable>
+            </div>
+          )}
         </main>
       </div>
     </ThemeProvider>

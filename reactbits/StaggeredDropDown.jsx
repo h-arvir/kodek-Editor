@@ -11,31 +11,8 @@ const StaggeredDropDown = ({ language, setLanguage, languageOptions }) => {
     <motion.div animate={open ? "open" : "closed"} className="relative">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-300 ${
-          isDark
-            ? "text-white bg-purple-700 hover:bg-purple-600"
-            : "text-gray-800 border border-pink-300/40 hover:border-pink-300/80 shadow-sm hover:shadow-md"
-        }`}
-        style={
-          !isDark
-            ? {
-                backgroundColor: "rgba(255, 232, 147, 0.7)",
-                "--tw-shadow": "0 2px 8px rgba(251, 180, 165, 0.15)",
-              }
-            : {}
-        }
-        onMouseEnter={(e) => {
-          if (!isDark) {
-            e.target.style.backgroundColor = "rgba(255, 232, 147, 0.9)";
-            e.target.style.boxShadow = "0 0 12px rgba(251, 180, 165, 0.4)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isDark) {
-            e.target.style.backgroundColor = "rgba(255, 232, 147, 0.7)";
-            e.target.style.boxShadow = "0 2px 8px rgba(251, 180, 165, 0.15)";
-          }
-        }}
+        className="button-secondary"
+        style={{ marginLeft: 0, marginRight: 0 }}
       >
         <span className="font-medium text-sm">{language}</span>
         <motion.span variants={iconVariants}>
