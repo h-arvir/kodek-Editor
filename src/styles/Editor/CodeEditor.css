@@ -127,6 +127,24 @@ body.editor-fullscreen .dock-container {
   background-color: rgba(255, 232, 147, 0.4) !important; /* FFE893 selection */
 }
 
+/* Mono mode Monaco editor overrides */
+.mono .monaco-editor .monaco-editor-background,
+.mono .monaco-editor .margin-view-overlays,
+.mono .monaco-editor .margin {
+  background-color: #000000 !important;
+}
+.mono .monaco-editor .cursor {
+  background-color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: none !important;
+}
+.mono .monaco-editor .line-numbers {
+  color: #555555 !important;
+}
+.mono .monaco-editor .selected-text {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
 /* Rest of editor styles */
 
 .editor-layout {

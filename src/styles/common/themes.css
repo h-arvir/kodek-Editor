@@ -85,3 +85,42 @@
   --output-panel-bg-light: #2d2d2d; /* Dark grey background for output */
   --output-panel-text-light: #ffffff; /* White text for dark output background */
 }
+
+/* Mono theme — pure black & white, zero color */
+.mono {
+  --primary: #ffffff;
+  --primary-dark: #cccccc;
+  --primary-light: #dddddd;
+  --primary-lighter: #eeeeee;
+  --primary-glow: rgba(255, 255, 255, 0.15);
+  --primary-transparent: rgba(255, 255, 255, 0.08);
+
+  --bg-dark: #000000;
+  --bg-darker: #000000;
+  --card-bg: #0a0a0a;
+  --panel-bg: #000000;
+  --panel-header: #0d0d0d;
+  --input-bg: #111111;
+  --editor-bg: #000000;
+
+  --text: #ffffff;
+  --text-secondary: #aaaaaa;
+
+  --border: #2a2a2a;
+  --border-light: #3a3a3a;
+  --border-glow: rgba(255, 255, 255, 0.1);
+
+  --dock-bg: #000000;
+  --dock-border: #2a2a2a;
+  --dock-item-bg: #000000;
+  --dock-item-border: #2a2a2a;
+  --dock-item-hover-bg: #1a1a1a;
+  --dock-item-hover-border: #555555;
+  --dock-item-active-bg: #222222;
+  --dock-label-bg: #000000;
+  --dock-label-border: #2a2a2a;
+  --dock-label-text: #ffffff;
+
+  --editor-cursor-shadow: rgba(255, 255, 255, 0.2);
+  --editor-selection-bg: rgba(255, 255, 255, 0.15);
+}

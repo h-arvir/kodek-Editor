@@ -36,7 +36,33 @@ const DARK_THEME = {
 
 const LIGHT_THEME = { ...DARK_THEME, background: '#1a1a2e', cursor: '#FB9EC6', selection: 'rgba(251,158,198,0.25)' };
 
-function useXterm({ containerRef, socket, isDark, isReady, canEdit }) {
+const MONO_THEME = {
+  background:    '#000000',
+  foreground:    '#ffffff',
+  cursor:        '#ffffff',
+  cursorAccent:  '#000000',
+  selection:     'rgba(255, 255, 255, 0.25)',
+  black:         '#000000',
+  red:           '#aaaaaa',
+  green:         '#cccccc',
+  yellow:        '#dddddd',
+  blue:          '#888888',
+  magenta:       '#bbbbbb',
+  cyan:          '#eeeeee',
+  white:         '#ffffff',
+  brightBlack:   '#444444',
+  brightRed:     '#bbbbbb',
+  brightGreen:   '#dddddd',
+  brightYellow:  '#eeeeee',
+  brightBlue:    '#999999',
+  brightMagenta: '#cccccc',
+  brightCyan:    '#f5f5f5',
+  brightWhite:   '#ffffff',
+};
+
+const getTermTheme = (theme) => theme === 'mono' ? MONO_THEME : theme === 'light' ? LIGHT_THEME : DARK_THEME;
+
+function useXterm({ containerRef, socket, isDark, isReady, canEdit, theme }) {
   const termRef       = useRef(null);
   const fitRef        = useRef(null);
   const writeQueueRef = useRef([]);
@@ -57,7 +83,7 @@ function useXterm({ containerRef, socket, isDark, isReady, canEdit }) {
     if (!isReady || !containerRef.current || termRef.current) return;
 
     const term = new Terminal({
-      theme:        isDark ? DARK_THEME : LIGHT_THEME,
+      theme:        getTermTheme(theme),
       fontFamily:   "'Fira Code', 'Consolas', 'Courier New', monospace",
       fontSize:     13,
       lineHeight:   1.4,
@@ -127,8 +153,8 @@ function useXterm({ containerRef, socket, isDark, isReady, canEdit }) {
   }, [isReady]);
 
   useEffect(() => {
-    if (termRef.current) termRef.current.options.theme = isDark ? DARK_THEME : LIGHT_THEME;
-  }, [isDark]);
+    if (termRef.current) termRef.current.options.theme = getTermTheme(theme);
+  }, [theme]);
 
   const clear = () => termRef.current?.clear();
 
@@ -177,14 +203,14 @@ function useXterm({ containerRef, socket, isDark, isReady, canEdit }) {
 export const EmbeddedTerminal = forwardRef(function EmbeddedTerminal({ isVisible, onClose }, ref) {
   const containerRef = useRef(null);
   const { socket, canEdit } = useCollaboration();
-  const { isDark }   = useTheme();
+  const { isDark, theme }   = useTheme();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (isVisible && !isReady) setIsReady(true);
   }, [isVisible, isReady]);
 
-  const { status, errorMsg, clear, restart, write, downloadOutput } = useXterm({ containerRef, socket, isDark, isReady, canEdit });
+  const { status, errorMsg, clear, restart, write, downloadOutput } = useXterm({ containerRef, socket, isDark, isReady, canEdit, theme });
 
   useImperativeHandle(ref, () => ({ write }), [write]);
 

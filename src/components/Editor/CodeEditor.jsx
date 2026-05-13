@@ -12,6 +12,7 @@ import {
   VscCloudDownload,
 } from 'react-icons/vsc';
 import { IoMdSunny, IoMdMoon } from 'react-icons/io';
+import { BsCircleHalf } from 'react-icons/bs';
 import { BsMic, BsCameraVideo, BsStars } from 'react-icons/bs';
 import { AIFloatingBar } from '../AI/AIFloatingBar';
 import { CommentThread } from '../Comments/CommentThread';
@@ -25,19 +26,33 @@ import { useTheme } from '../../context/theme';
 
 const configureMonacoThemes = (monaco) => {
   monaco.editor.defineTheme('kodek-light-grey', {
-    base: 'vs', // Use VS light as the base
-    inherit: true, // Inherit rules from the base theme
-    rules: [], // No custom token rules
+    base: 'vs',
+    inherit: true,
+    rules: [],
     colors: {
-      // Set the editor background to light grey
       'editor.background': '#f0f0f0',
       'editor.foreground': '#333333',
       'editorLineNumber.foreground': '#666666',
-      'editorCursor.foreground': '#9b5de5', // Primary color for cursor
-      'editor.selectionBackground': 'rgba(155, 93, 229, 0.2)', // Primary color for selection
+      'editorCursor.foreground': '#9b5de5',
+      'editor.selectionBackground': 'rgba(155, 93, 229, 0.2)',
       'editor.inactiveSelectionBackground': 'rgba(155, 93, 229, 0.1)',
-      'editorLineHighlight.background': '#e6f5fd', // Secondary color for line highlight
-      'editor.lineHighlightBorder': '#d0f0fd', // Secondary color for line highlight border
+      'editorLineHighlight.background': '#e6f5fd',
+      'editor.lineHighlightBorder': '#d0f0fd',
+    }
+  });
+  monaco.editor.defineTheme('kodek-mono', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': '#000000',
+      'editor.foreground': '#ffffff',
+      'editorLineNumber.foreground': '#666666',
+      'editorCursor.foreground': '#ffffff',
+      'editor.selectionBackground': 'rgba(255, 255, 255, 0.2)',
+      'editor.inactiveSelectionBackground': 'rgba(255, 255, 255, 0.1)',
+      'editorLineHighlight.background': '#111111',
+      'editor.lineHighlightBorder': '#222222',
     }
   });
 };
@@ -92,7 +107,7 @@ export const CodeEditor = memo(
     const openThreadLineRef = useRef(null);
 
     const { unreadCount } = useCollaboration();
-    const { toggleTheme, isDark } = useTheme();
+    const { theme, toggleTheme, isDark } = useTheme();
 
     useEffect(() => {
       loader.init().then((m) => {
@@ -100,6 +115,13 @@ export const CodeEditor = memo(
         monacoRef.current = m;
       });
     }, []);
+
+    useEffect(() => {
+      if (!monacoRef.current) return;
+      if (theme === 'light') monacoRef.current.editor.setTheme('kodek-light-grey');
+      else if (theme === 'mono') monacoRef.current.editor.setTheme('kodek-mono');
+      else monacoRef.current.editor.setTheme('vs-dark');
+    }, [theme]);
 
     // Compute position for the comment thread panel (fixed coords)
     const computeThreadPos = (editor, line) => {
@@ -131,7 +153,8 @@ export const CodeEditor = memo(
     const wrappedEditorDidMount = (editor, monaco) => {
       configureMonacoThemes(monaco);
       monacoRef.current = monaco;
-      if (!isDark) monaco.editor.setTheme('kodek-light-grey');
+      if (theme === 'light') monaco.editor.setTheme('kodek-light-grey');
+      else if (theme === 'mono') monaco.editor.setTheme('kodek-mono');
       if (handleEditorDidMount) handleEditorDidMount(editor, monaco);
 
       editorRef.current = editor;
@@ -299,8 +322,8 @@ export const CodeEditor = memo(
         },
       },
       {
-        icon: isDark ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
-        label: isDark ? 'Light Mode' : 'Dark Mode',
+        icon: theme === 'dark' ? <BsCircleHalf size={18} /> : theme === 'mono' ? <IoMdSunny size={18} /> : <IoMdMoon size={18} />,
+        label: theme === 'dark' ? 'Mono Mode' : theme === 'mono' ? 'Light Mode' : 'Dark Mode',
         onClick: toggleTheme,
       },
       {

@@ -111,6 +111,28 @@
   border-color: rgba(0, 0, 0, 0.1);
 }
 
+/* Mono theme — black & white only */
+.mono .audio-chat-button.join {
+  background: #ffffff;
+  color: #000000;
+}
+.mono .audio-chat-button.join:hover:not(:disabled) {
+  background: #cccccc;
+}
+.mono .audio-chat-button.leave {
+  background: #333333;
+  color: #ffffff;
+  border: 1px solid #666666;
+}
+.mono .audio-chat-button.leave:hover:not(:disabled) {
+  background: #555555;
+}
+.mono .audio-chat-connected-indicator {
+  background: #ffffff;
+  box-shadow: none;
+  animation: none;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .audio-chat-panel {

@@ -270,18 +270,28 @@ function App() {
     [handleCodeChange, selectedFileId, setFileContent],
   );
 
+  // Flag to skip the persistence effect immediately after switching files,
+  // preventing stale code from the previous file overwriting the new file's content.
+  const fileJustSwitchedRef = useRef(false);
+
   // When a file is selected, load its content into the editor
   useEffect(() => {
     if (selectedFile && selectedFile.content !== undefined) {
+      fileJustSwitchedRef.current = true;
       handleCodeChange(selectedFile.content);
     }
   }, [selectedFileId]);
 
-  // Persist any editor changes (including remote) into the selected file
+  // Persist any editor changes (including remote) into the selected file.
+  // Skip the first run after a file switch — at that point `code` still holds
+  // the previous file's content and would corrupt the newly selected file.
   useEffect(() => {
-    if (selectedFileId) {
-      setFileContent(selectedFileId, code);
+    if (!selectedFileId) return;
+    if (fileJustSwitchedRef.current) {
+      fileJustSwitchedRef.current = false;
+      return;
     }
+    setFileContent(selectedFileId, code);
   }, [code, selectedFileId, setFileContent]);
 
   // Listen for remote language changes
